@@ -10,5 +10,5 @@ enum DayOfWeekTurns: int
     case THURSDAY = 4;
     case FRIDAY = 5;
     case SATURDAY = 6;
-    case SUNDAY = 7;
+    case SUNDAY = 0;
 }

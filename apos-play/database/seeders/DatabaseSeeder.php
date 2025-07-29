@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             CourtAddressSeeder::class,
             CourtSeeder::class,
             ScheduleSeeder::class,
+            ReservationSeeder::class,
         ]);
     }
 }

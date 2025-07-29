@@ -14,6 +14,8 @@ class Reservation extends Model
         'user_id',
         'schedule_id',
         'reservation_date',
+        'start_time',
+        'duration_hours',
         'status',
         'total_price',
         'notes'
