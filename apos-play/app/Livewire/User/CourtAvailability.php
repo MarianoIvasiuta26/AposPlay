@@ -93,7 +93,7 @@ class CourtAvailability extends Component
      * @param int $courtId ID de la cancha
      * @return array Array de horas disponibles
      */
-    private function generateHoursArray($schedules, int $courtId = null)
+    private function generateHoursArray($schedules, int $courtId)
     {
         $hoursArray = [];
         
