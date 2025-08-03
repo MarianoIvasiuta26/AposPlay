@@ -63,8 +63,8 @@ class CourtAvailability extends Component
         $this->courts = collect($courtsWithAvailability);
         
         // Mostrar solo el array de horas disponibles con fechas para depuración
-        dump("Available Hours With Dates:");
-        dump($this->available_hours_with_dates);
+        // dump("Available Hours With Dates:");
+        // dump($this->available_hours_with_dates);
     }
 
     public function loadSchedule(int $courtId)
