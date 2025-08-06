@@ -18,9 +18,10 @@ class CourtAvailability extends Component
     
     public function mount()
     {
-        // Usar la fecha de mañana en lugar de hoy
-        $this->date = now()->addDay();
+        // Usar la fecha de mañana en lugar de hoy, con zona horaria de Argentina
+        $this->date = now()->setTimezone('America/Argentina/Buenos_Aires')->addDay();
         $this->dayOfWeek = $this->date->dayOfWeek;
+        \Illuminate\Support\Facades\Log::info("Fecha seleccionada: {$this->date->toDateString()}, día de la semana: {$this->dayOfWeek}");
         $this->loadAvailability();
     }
 
@@ -312,6 +313,12 @@ class CourtAvailability extends Component
             ->where('reservation_date', '>=', $fromDate)
             ->whereIn('status', ['pending', 'confirmed'])
             ->get();
+        
+        // Depurar las reservas encontradas
+        \Illuminate\Support\Facades\Log::info("Reservas encontradas para cancha {$courtId} desde {$fromDate}: " . count($reservations));
+        if (count($reservations) > 0) {
+            \Illuminate\Support\Facades\Log::info("Primera reserva: " . json_encode($reservations[0]));
+        }
             
         // Convertir a array de objetos estándar
         return json_decode(json_encode($reservations), true);
@@ -336,7 +343,7 @@ class CourtAvailability extends Component
         $hourFormatted = $hour . ':00';
         
         // Obtener la fecha de mañana y calcular la fecha del día de la semana que estamos verificando
-        $tomorrow = Carbon::tomorrow();
+        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
         $currentDayOfWeek = $tomorrow->dayOfWeek;
         
         // Calcular la fecha para el día de la semana que estamos verificando
@@ -351,56 +358,45 @@ class CourtAvailability extends Component
         $targetDate->addDays($daysToAdd);
         $targetDateStr = $targetDate->toDateString();
         
+        // Depurar información de la fecha objetivo
+        \Illuminate\Support\Facades\Log::info("Verificando reservas para fecha: {$targetDateStr}, día de semana: {$dayOfWeek}, hora: {$hour}");
+        
         // Iterar sobre todas las reservas para esta cancha
         foreach ($reservations as $reservation) {
             // Verificar que la reserva tenga los campos necesarios
-            if (!isset($reservation->reservation_date) || !isset($reservation->start_time) || !isset($reservation->duration_hours)) {
+            if (!isset($reservation['reservation_date']) || !isset($reservation['start_time']) || !isset($reservation['duration_hours'])) {
                 continue;
             }
             
-            // Verificar si la reserva es para la fecha objetivo o es una reserva recurrente semanal
-            // Primero verificamos si es para la fecha exacta
-            $isForTargetDate = ($reservation->reservation_date === $targetDateStr);
-            
-            // Si no es para la fecha exacta, verificamos si es una reserva recurrente para el mismo día de la semana
-            if (!$isForTargetDate) {
-                $reservationDate = Carbon::parse($reservation->reservation_date);
-                $reservationDayOfWeek = $reservationDate->dayOfWeek;
-                
-                // Si no es el mismo día de la semana, no aplica
-                if ($reservationDayOfWeek != $dayOfWeek) {
-                    continue;
-                }
-                
-                // Verificar si la reserva es para una fecha futura (posterior a la fecha objetivo)
-                if ($reservationDate->gt($targetDate)) {
-                    continue;
-                }
+            // Verificar si la reserva es para la fecha objetivo
+            if ($reservation['reservation_date'] !== $targetDateStr) {
+                continue; // Si no es para la fecha objetivo, ignorar esta reserva
             }
             
             // Obtener la hora de inicio y fin de la reserva
-            $reservationStart = Carbon::parse($reservation->start_time);
-            $reservationEnd = (clone $reservationStart)->addHours($reservation->duration_hours);
+            $reservationStart = Carbon::parse($reservation['start_time']);
+            $reservationEnd = (clone $reservationStart)->addHours($reservation['duration_hours']);
             
             // Convertir la hora a verificar a un objeto Carbon
             $hourToCheck = Carbon::parse($hourFormatted);
             
             // Verificar si la hora está dentro del rango de la reserva
             // Comparamos solo las horas, no las fechas completas
-            // Aseguramos que todos los formatos sean H:i:s para la comparación
-            $hourToCheckFormatted = $hourToCheck->format('H:i') . ':00';
+            $hourToCheckFormatted = $hourToCheck->format('H:i:s');
             $reservationStartFormatted = $reservationStart->format('H:i:s');
             $reservationEndFormatted = $reservationEnd->format('H:i:s');
             
+            \Illuminate\Support\Facades\Log::info("Comparando hora {$hourToCheckFormatted} con reserva {$reservation['id']} de {$reservationStartFormatted} a {$reservationEndFormatted}");
+            
             if ($hourToCheckFormatted >= $reservationStartFormatted && 
                 $hourToCheckFormatted < $reservationEndFormatted) {
+                \Illuminate\Support\Facades\Log::info("Hora {$hour} RESERVADA para fecha {$targetDateStr}");
                 return true; // La hora está reservada
             }
         }
         
         return false; // La hora no está reservada
     }
-    
     /**
      * Verifica si un array de horas tiene al menos minContinuousHours horas continuas
      * @param array $hoursArray Array de horas
