@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::create('schedules', function (Blueprint $table) {
             $table->id();
-            $table->string('day_of_week');
+            $table->integer('day_of_week');
             $table->time('start_time');
             $table->time('end_time');
             $table->string('turn');
