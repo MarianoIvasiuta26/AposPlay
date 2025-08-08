@@ -16,55 +16,88 @@ class CourtAvailability extends Component
     public $availableHours;
     public $hoursXCourts;
     
+    // Propiedades para el filtro de fecha
+    public $selectedDate;
+    public $availableDates = [];
+    public $courtType = 'all';
+    
     public function mount()
     {
         // Usar la fecha de mañana en lugar de hoy, con zona horaria de Argentina
         $this->date = now()->setTimezone('America/Argentina/Buenos_Aires')->addDay();
         $this->dayOfWeek = $this->date->dayOfWeek;
-        \Illuminate\Support\Facades\Log::info("Fecha seleccionada: {$this->date->toDateString()}, día de la semana: {$this->dayOfWeek}");
+        
+        // Inicializar fechas disponibles (próximos 7 días)
+        $this->initializeAvailableDates();
+        
+        // Por defecto, seleccionar mañana
+        $this->selectedDate = $this->date->toDateString();
+        
+        \Illuminate\Support\Facades\Log::info("Fecha seleccionada: {$this->selectedDate}, día de la semana: {$this->dayOfWeek}");
         $this->loadAvailability();
+    }
+    
+    /**
+     * Inicializa el array de fechas disponibles para los próximos 7 días
+     */
+    private function initializeAvailableDates()
+    {
+        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
+        
+        for ($i = 0; $i < 7; $i++) {
+            $date = $tomorrow->copy()->addDays($i);
+            $this->availableDates[] = [
+                'value' => $date->toDateString(),
+                'label' => $date->format('d/m/Y') . ' - ' . $this->getDayName($date->dayOfWeek)
+            ];
+        }
     }
 
     public function render()
-    {
-        // Si no hay horas disponibles para ninguna cancha, agregar datos de ejemplo
-        $hasAvailableHours = false;
-        foreach ($this->hoursXCourts as $courtId => $hours) {
-            if (!empty($hours)) {
-                $hasAvailableHours = true;
-                break;
-            }
+    {   
+        // Filtrar canchas por tipo si es necesario
+        $filteredCourts = $this->courts;
+        if ($this->courtType !== 'all') {
+            $filteredCourts = $filteredCourts->filter(function($court) {
+                return $court->type === $this->courtType;
+            })->values();
         }
         
-        // if (!$hasAvailableHours) {
-        //     // Agregar datos de ejemplo para todas las canchas
-        //     foreach ($this->courts as $court) {
-        //         $tomorrow = \Carbon\Carbon::tomorrow();
-        //         $date = $tomorrow->toDateString();
-        //         $dayName = $this->getDayName($tomorrow->dayOfWeek);
-                
-        //         // Crear horas de ejemplo para esta cancha
-        //         $this->hoursXCourts[$court->id] = [
-        //             $date => [
-        //                 'day_name' => $dayName,
-        //                 'date' => $date,
-        //                 'hours' => [
-        //                     ['hour' => '09:00', 'court_id' => $court->id],
-        //                     ['hour' => '10:00', 'court_id' => $court->id],
-        //                     ['hour' => '16:00', 'court_id' => $court->id],
-        //                     ['hour' => '17:00', 'court_id' => $court->id],
-        //                     ['hour' => '18:00', 'court_id' => $court->id],
-        //                     ['hour' => '20:00', 'court_id' => $court->id],
-        //                 ]
-        //             ]
-        //         ];
-        //     }
-            
-        //     // Agregar un mensaje de log para indicar que se están usando datos de ejemplo
-        //     \Illuminate\Support\Facades\Log::warning('No se encontraron horas disponibles reales. Usando datos de ejemplo.');
-        // }
+        return view('livewire.user.court-availability', [
+            'filteredCourts' => $filteredCourts
+        ]);
+    }
+    
+    /**
+     * Actualiza la fecha seleccionada y recarga la disponibilidad
+     */
+    public function updateSelectedDate($date)
+    {
+        $this->selectedDate = $date;
+        \Illuminate\Support\Facades\Log::info("Nueva fecha seleccionada: {$this->selectedDate}");
         
-        return view('livewire.user.court-availability');
+    }
+    
+    /**
+     * Actualiza el tipo de cancha seleccionado
+     */
+    public function updateCourtType($type)
+    {
+        $this->courtType = $type;
+        \Illuminate\Support\Facades\Log::info("Nuevo tipo de cancha seleccionado: {$this->courtType}");
+    }
+    
+    /**
+     * Restablece los filtros a sus valores predeterminados
+     */
+    public function resetFilters()
+    {
+        // Restablecer fecha a mañana
+        $this->selectedDate = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires')->toDateString();
+        // Restablecer tipo de cancha a 'all'
+        $this->courtType = 'all';
+        
+        \Illuminate\Support\Facades\Log::info("Filtros restablecidos: fecha={$this->selectedDate}, tipo={$this->courtType}");
     }
 
     public function loadAvailability(int $minContinuousHours = 0) // Cambiado a 0 para mostrar todas las canchas
@@ -221,8 +254,11 @@ class CourtAvailability extends Component
     {
         $availableHoursWithDates = [];
         // Usar mañana como fecha de inicio
-        $tomorrow = Carbon::tomorrow();
+        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
         $currentDayOfWeek = $tomorrow->dayOfWeek;
+        
+        // Depurar la fecha de mañana
+        \Illuminate\Support\Facades\Log::info("Fecha de mañana: {$tomorrow->toDateString()}, día de la semana: {$currentDayOfWeek}");
         
         // Agrupar las horas por día de la semana
         $hoursByDay = [];
@@ -234,12 +270,21 @@ class CourtAvailability extends Component
             $hoursByDay[$dayOfWeek][$hourKey] = $hourData;
         }
         
+        // Depurar los días de la semana disponibles
+        \Illuminate\Support\Facades\Log::info("Días de la semana con horarios: " . implode(", ", array_keys($hoursByDay)));
+        if (count($hoursByDay) > 0) {
+            $firstDay = array_key_first($hoursByDay);
+            \Illuminate\Support\Facades\Log::info("Horarios para el día {$firstDay}: " . count($hoursByDay[$firstDay]));
+        }
+        
         // Generar disponibilidad para los próximos 7 días, comenzando desde mañana
         for ($dayOffset = 0; $dayOffset < 7; $dayOffset++) {
             // Calcular la fecha para este día, comenzando desde mañana
             $targetDate = $tomorrow->copy()->addDays($dayOffset);
             $targetDayOfWeek = $targetDate->dayOfWeek;
             $dateStr = $targetDate->toDateString();
+            
+            \Illuminate\Support\Facades\Log::info("Generando disponibilidad para día {$dayOffset}: {$dateStr}, día de la semana: {$targetDayOfWeek}");
             
             // Si tenemos horarios para este día de la semana
             if (isset($hoursByDay[$targetDayOfWeek])) {
@@ -251,15 +296,22 @@ class CourtAvailability extends Component
                 // Agregar las horas disponibles para este día
                 foreach ($hours as $hourKey => $hourData) {
                     try {
-                        $availableHoursWithDates[] = [
-                            'court_id' => $courtId,
-                            'hour' => $hourKey,
-                            'date' => $dateStr,
-                            'day_of_week' => $targetDayOfWeek,
-                            'day_name' => $this->getDayName($targetDayOfWeek),
-                            'turn' => $hourData['turn'] ?? 'morning', // Valor por defecto si no existe
-                            'schedule_id' => $hourData['schedule_id'] ?? 0 // Valor por defecto si no existe
-                        ];
+                        // Solo agregar las horas si el día de la semana coincide con el día actual que estamos procesando
+                        // Esto asegura que los horarios se asignen al día correcto
+                        if ($hourData['day_of_week'] == $targetDayOfWeek) {
+                            $availableHoursWithDates[] = [
+                                'court_id' => $courtId,
+                                'hour' => $hourKey,
+                                'date' => $dateStr,
+                                'day_of_week' => $targetDayOfWeek,
+                                'day_name' => $this->getDayName($targetDayOfWeek),
+                                'turn' => $hourData['turn'] ?? 'morning', // Valor por defecto si no existe
+                                'schedule_id' => $hourData['schedule_id'] ?? 0 // Valor por defecto si no existe
+                            ];
+                            
+                            // Depurar la hora agregada
+                            \Illuminate\Support\Facades\Log::info("Agregando hora {$hourKey} para día {$targetDayOfWeek} ({$this->getDayName($targetDayOfWeek)}) con fecha {$dateStr}");
+                        }
                     } catch (\Exception $e) {
                         // Registrar el error pero continuar con el siguiente
                         \Illuminate\Support\Facades\Log::error('Error al procesar hora disponible: ' . $e->getMessage());
@@ -397,123 +449,6 @@ class CourtAvailability extends Component
         
         return false; // La hora no está reservada
     }
-    /**
-     * Verifica si un array de horas tiene al menos minContinuousHours horas continuas
-     * @param array $hoursArray Array de horas
-     * @param int $minContinuousHours Mínimo de horas continuas requeridas
-     * @return bool True si hay al menos minContinuousHours horas continuas, false en caso contrario
-     */
-    private function hasMinimumContinuousHours($hoursArray, $minContinuousHours)
-    {
-        if (empty($hoursArray)) {
-            return false;
-        }
-        
-        // Obtener las horas como array ordenado
-        $hours = array_keys($hoursArray);
-        sort($hours);
-        
-        // Si hay menos horas que el mínimo requerido, retornar false
-        if (count($hours) < $minContinuousHours) {
-            return false;
-        }
-        
-        // Verificar si hay al menos minContinuousHours horas continuas
-        $continuousCount = 1;
-        $previousHour = null;
-        
-        foreach ($hours as $hour) {
-            if ($previousHour !== null) {
-                // Convertir a objetos Carbon para comparar
-                $current = Carbon::createFromFormat('H:i', $hour);
-                $previous = Carbon::createFromFormat('H:i', $previousHour);
-                
-                // Si la diferencia es de 1 hora, incrementar el contador
-                if ($current->diffInHours($previous) === 1) {
-                    $continuousCount++;
-                    
-                    // Si alcanzamos el mínimo requerido, retornar true
-                    if ($continuousCount >= $minContinuousHours) {
-                        return true;
-                    }
-                } else {
-                    // Reiniciar el contador si hay un salto
-                    $continuousCount = 1;
-                }
-            }
-            
-            $previousHour = $hour;
-        }
-        
-        // Verificar si al final alcanzamos el mínimo requerido
-        return $continuousCount >= $minContinuousHours;
-    }
-    
-    /**
-     * Organiza los horarios por día y turno
-     * @param mixed $schedules Colección de horarios
-     * @param int $currentDayOfWeek Día de la semana actual
-     * @param Carbon $currentTime Hora actual
-     * @param int $minContinuousHours Mínimo de horas continuas requeridas
-     * @return \Illuminate\Support\Collection Colección de horarios organizados por día y turno
-     */
-    private function organizeSchedulesByDayAndTurn($schedules, $currentDayOfWeek, $currentTime, $minContinuousHours = 2)
-    {
-        $weeklySchedule = [];
-        $hasAvailability = false;
-        
-        foreach ($schedules as $schedule) {
-            // Inicializar la estructura para este día si no existe
-            if (!isset($weeklySchedule[$schedule->day_of_week])) {
-                $weeklySchedule[$schedule->day_of_week] = [
-                    'morning' => null,
-                    'afternoon' => null,
-                    'available_hours' => []
-                ];
-            }
-            
-            // Asignar el horario al turno correspondiente
-            $weeklySchedule[$schedule->day_of_week][$schedule->turn] = $schedule;
-            
-            // Calcular las horas disponibles
-            $start = Carbon::createFromFormat('H:i:s', $schedule->start_time);
-            $end = Carbon::createFromFormat('H:i:s', $schedule->end_time);
-            
-            // Si es el día actual, usar la hora actual como punto de inicio
-            if ($schedule->day_of_week == $currentDayOfWeek && $currentTime->format('H:i:s') > $start->format('H:i:s')) {
-                $start = Carbon::createFromFormat('H:i:s', $currentTime->format('H:i:s'));
-            }
-            
-            // Si no hay suficientes horas entre start y end, continuar con el siguiente horario
-            if ($start->diffInHours($end) < $minContinuousHours) {
-                continue;
-            }
-            
-            // Generar horas disponibles
-            $availableHours = [];
-            $current = $start->copy();
-            
-            while ($current < $end) {
-                $availableHours[] = $current->format('H:i');
-                $current->addHour();
-                $hasAvailability = true;
-            }
-            
-            // Agregar las horas disponibles al día
-            $weeklySchedule[$schedule->day_of_week]['available_hours'] = array_merge(
-                $weeklySchedule[$schedule->day_of_week]['available_hours'],
-                $availableHours
-            );
-        }
-        
-        // Ordenar y eliminar duplicados de las horas disponibles
-        foreach ($weeklySchedule as $dayOfWeek => $daySchedule) {
-            sort($weeklySchedule[$dayOfWeek]['available_hours']);
-            $weeklySchedule[$dayOfWeek]['available_hours'] = array_unique($weeklySchedule[$dayOfWeek]['available_hours']);
-        }
-        
-        return collect($weeklySchedule);
-    }
     
     /**
      * Organiza las horas disponibles por fecha
@@ -523,6 +458,12 @@ class CourtAvailability extends Component
     private function organizeHoursByDate(array $availableHours): array
     {
         $hoursByDate = [];
+        
+        // Depurar los datos de entrada
+        \Illuminate\Support\Facades\Log::info("organizeHoursByDate - Cantidad de horas disponibles: " . count($availableHours));
+        if (count($availableHours) > 0) {
+            \Illuminate\Support\Facades\Log::info("Primera hora disponible: " . json_encode($availableHours[0]));
+        }
         
         foreach ($availableHours as $hourData) {
             $date = $hourData['date'];
