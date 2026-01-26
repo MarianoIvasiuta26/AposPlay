@@ -64,3 +64,12 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+
+.form-input {
+    @apply w-full rounded-lg border
+    bg-white text-gray-900 border-gray-300
+    placeholder-gray-400
+    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500
+    dark:bg-neutral-900 dark:text-white dark:border-neutral-700 dark:placeholder-gray-500;
+}
