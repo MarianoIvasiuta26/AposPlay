@@ -35,6 +35,11 @@ class User extends Authenticatable
         return $this->hasMany(Reservation::class);
     }
 
+    public function canchas()
+    {
+        return $this->hasMany(Cancha::class);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -65,7 +70,7 @@ class User extends Authenticatable
     {
         return Str::of($this->name)
             ->explode(' ')
-            ->map(fn (string $name) => Str::of($name)->substr(0, 1))
+            ->map(fn(string $name) => Str::of($name)->substr(0, 1))
             ->implode('');
     }
 }
