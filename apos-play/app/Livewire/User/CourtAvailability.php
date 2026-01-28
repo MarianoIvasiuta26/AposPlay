@@ -21,6 +21,16 @@ class CourtAvailability extends Component
     public $availableDates = [];
     public $courtType = 'all';
 
+    // Propiedades para el modal de reserva
+    public $showReservationModal = false;
+    public $reservationCourtId;
+    public $reservationScheduleId;
+    public $reservationDate;
+    public $reservationTime;
+    public $reservationCourtName;
+    public $reservationDuration = 1;
+    public $reservationPrice;
+
     public function mount()
     {
         // Usar la fecha de mañana en lugar de hoy, con zona horaria de Argentina
@@ -98,6 +108,95 @@ class CourtAvailability extends Component
         $this->courtType = 'all';
 
         \Illuminate\Support\Facades\Log::info("Filtros restablecidos: fecha={$this->selectedDate}, tipo={$this->courtType}");
+    }
+
+    public function openReservationModal($courtId, $scheduleId, $date, $time)
+    {
+        $this->reservationCourtId = $courtId;
+        $this->reservationScheduleId = $scheduleId;
+        $this->reservationDate = $date;
+        $this->reservationTime = $time;
+
+        // Obtener información de la cancha para mostrar
+        $court = $this->courts->firstWhere('id', $courtId);
+        $this->reservationCourtName = $court ? $court->name : 'Cancha';
+        $this->reservationPrice = $court ? $court->price : 0;
+
+        $this->showReservationModal = true;
+    }
+
+    public function closeReservationModal()
+    {
+        $this->showReservationModal = false;
+        $this->reset(['reservationCourtId', 'reservationScheduleId', 'reservationDate', 'reservationTime', 'reservationCourtName', 'reservationPrice', 'reservationDuration']);
+    }
+
+    public function confirmReservation()
+    {
+        $this->validate([
+            'reservationDuration' => 'required|integer|min:1|max:4',
+        ]);
+
+        try {
+            // Obtener el horario de la cancha para validar límites
+            $schedule = DB::table('schedules')->where('id', $this->reservationScheduleId)->first();
+            if (!$schedule) {
+                session()->flash('error', 'Horario no válido.');
+                $this->closeReservationModal();
+                return;
+            }
+
+            // Validar que la reserva no exceda el horario de cierre
+            $startTime = Carbon::parse($this->reservationTime);
+            $endTime = $startTime->copy()->addHours((int) $this->reservationDuration);
+            $scheduleEndTime = Carbon::parse($schedule->end_time);
+
+            // Si el horario termina después del cierre del turno
+            if ($endTime->format('H:i') > $scheduleEndTime->format('H:i') && $scheduleEndTime->format('H:i') != '00:00') {
+                session()->flash('error', 'La duración seleccionada excede el horario de cierre de la cancha.');
+                return;
+            }
+
+            // Verificar disponibilidad para TODAS las horas de la duración seleccionada
+            $reservations = $this->getReservationsForCourt($this->reservationCourtId, $this->reservationDate);
+            $dayOfWeek = Carbon::parse($this->reservationDate)->dayOfWeek;
+
+            for ($i = 0; $i < $this->reservationDuration; $i++) {
+                $checkTime = $startTime->copy()->addHours($i)->format('H:i');
+                $isReserved = $this->isHourReserved($checkTime, $dayOfWeek, $this->reservationCourtId, $reservations);
+
+                if ($isReserved) {
+                    session()->flash('error', "El horario de las {$checkTime} ya está reservado. Por favor selecciona una menor duración u otro horario.");
+                    $this->closeReservationModal();
+                    $this->loadAvailability();
+                    return;
+                }
+            }
+
+            // Calcular precio total
+            $total = $this->reservationPrice * $this->reservationDuration;
+
+            \App\Models\Reservation::create([
+                'user_id' => auth()->id(),
+                'court_id' => $this->reservationCourtId,
+                'schedule_id' => $this->reservationScheduleId,
+                'reservation_date' => $this->reservationDate,
+                'start_time' => $this->reservationTime,
+                'duration_hours' => $this->reservationDuration,
+                'status' => 'pending',
+                'total_price' => $total,
+            ]);
+
+            session()->flash('success', '¡Reserva realizada con éxito!');
+            $this->closeReservationModal();
+
+            // Recargar disponibilidad para mostrar el slot como reservado
+            $this->loadAvailability();
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al crear reserva: ' . $e->getMessage());
+            session()->flash('error', 'Ocurrió un error al procesar la reserva. Por favor intente nuevamente.');
+        }
     }
 
     public function loadAvailability(int $minContinuousHours = 0) // Cambiado a 0 para mostrar todas las canchas

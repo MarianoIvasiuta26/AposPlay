@@ -1,7 +1,7 @@
 <?php
 
 use App\Livewire\User\CourtAvailability;
-use App\Livewire\User\ReservationForm;
+// use App\Livewire\User\ReservationForm;
 use App\Livewire\Canchas;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
@@ -25,9 +25,9 @@ Route::middleware(['auth'])->group(function () {
 });
 
 //Rutas de reservas
-Route::get('/reservar/{court}/{schedule}/{date}', ReservationForm::class)->name('reservations.create');
+// Route::get('/reservar/{court}/{schedule}/{date}', ReservationForm::class)->name('reservations.create');
 
 //Rutas de canchas
 Route::get('/canchas', Canchas::class)->name('canchas');
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

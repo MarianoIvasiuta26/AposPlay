@@ -68,23 +68,25 @@
                                                     $isReserved = isset($hourData['status']) && $hourData['status'] === 'reserved';
                                                 @endphp
 
-                                                <button @if($isReserved) disabled @endif class="
-                                                                            @if($isReserved)
-                                                                                bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600
-                                                                            @else
-                                                                                bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 dark:text-blue-300 dark:border-blue-800
-                                                                            @endif
-                                                                            font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center
-                                                                        ">
-                                                    <span class="font-bold">{{ $hourData['hour'] }}</span>
-                                                    <span class="text-xs mt-1">
-                                                        @if($isReserved)
-                                                            Reservado
-                                                        @else
-                                                            Disponible
-                                                        @endif
-                                                    </span>
-                                                </button>
+                                                @if($isReserved)
+                                                    <button disabled class="
+                                                                                                        bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600
+                                                                                                        font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center
+                                                                                                    ">
+                                                        <span class="font-bold">{{ $hourData['hour'] }}</span>
+                                                        <span class="text-xs mt-1">Reservado</span>
+                                                    </button>
+                                                @else
+                                                    <button
+                                                        wire:click="openReservationModal({{ $court->id }}, {{ $hourData['schedule_id'] }}, '{{ $selectedDate }}', '{{ $hourData['hour'] }}')"
+                                                        class="
+                                                                                                            bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 dark:text-blue-300 dark:border-blue-800
+                                                                                                            font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center cursor-pointer
+                                                                                                        ">
+                                                        <span class="font-bold">{{ $hourData['hour'] }}</span>
+                                                        <span class="text-xs mt-1">Disponible</span>
+                                                    </button>
+                                                @endif
                                             @endforeach
                                         </div>
                                     </div>
@@ -123,6 +125,85 @@
                             class="ml-2 underline hover:text-yellow-800 dark:hover:text-yellow-200">Restablecer
                             filtros</button>
                     </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Modal de Reserva -->
+    @if($showReservationModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <!-- Background overlay -->
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"
+                    wire:click="closeReservationModal"></div>
+
+                <!-- Center modal -->
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div
+                    class="inline-block align-bottom bg-white dark:bg-neutral-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white dark:bg-neutral-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div
+                                class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-green-600 dark:text-green-400" xmlns="http://www.w3.org/2000/svg"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                                    Confirmar Reserva
+                                </h3>
+                                <div class="mt-4 space-y-3">
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        Por favor verifica los detalles de tu reserva:
+                                    </p>
+
+                                    <div class="bg-gray-50 dark:bg-neutral-700 p-3 rounded-md">
+                                        <p class="font-semibold text-gray-900 dark:text-gray-200">
+                                            {{ $reservationCourtName }}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                                            {{ \Carbon\Carbon::parse($reservationDate)->format('d/m/Y') }} a las
+                                            {{ $reservationTime }}</p>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Precio por hora:
+                                            ${{ number_format($reservationPrice, 0, ',', '.') }}</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="duration"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Duración
+                                            (horas)</label>
+                                        <select wire:model="reservationDuration" id="duration"
+                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white dark:bg-neutral-700 dark:border-neutral-600 dark:text-white rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                                            <option value="1">1 hora</option>
+                                            <option value="2">2 horas</option>
+                                            <option value="3">3 horas</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="text-right pt-2 border-t border-gray-100 dark:border-neutral-700 mt-3">
+                                        <p class="text-lg font-bold text-gray-900 dark:text-white">
+                                            Total:
+                                            ${{ number_format($reservationPrice * $reservationDuration, 0, ',', '.') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" wire:click="confirmReservation"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            Confirmar Reserva
+                        </button>
+                        <button type="button" wire:click="closeReservationModal"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm dark:bg-neutral-600 dark:text-gray-200 dark:border-neutral-500 dark:hover:bg-neutral-500">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
