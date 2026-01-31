@@ -21,6 +21,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
+    Route::get('/mis-reservas', App\Livewire\User\MyReservations::class)->name('my-reservations');
+
     Route::get('/court-availability', CourtAvailability::class)->name('court-availability');
 });
 

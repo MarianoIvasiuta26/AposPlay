@@ -13,13 +13,13 @@ class Court extends Model
         'name',
         'price',
         'type',
-        'address_id',
+        'court_address_id',
         'number_players'
     ];
 
     public function address()
     {
-        return $this->belongsTo(CourtAddress::class);
+        return $this->belongsTo(CourtAddress::class, 'court_address_id');
     }
 
     public function courtsXAdmin()

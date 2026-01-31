@@ -70,9 +70,9 @@
 
                                                 @if($isReserved)
                                                     <button disabled class="
-                                                                                                        bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600
-                                                                                                        font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center
-                                                                                                    ">
+                                                                                                                                bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600
+                                                                                                                                font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center
+                                                                                                                            ">
                                                         <span class="font-bold">{{ $hourData['hour'] }}</span>
                                                         <span class="text-xs mt-1">Reservado</span>
                                                     </button>
@@ -80,9 +80,9 @@
                                                     <button
                                                         wire:click="openReservationModal({{ $court->id }}, {{ $hourData['schedule_id'] }}, '{{ $selectedDate }}', '{{ $hourData['hour'] }}')"
                                                         class="
-                                                                                                            bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 dark:text-blue-300 dark:border-blue-800
-                                                                                                            font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center cursor-pointer
-                                                                                                        ">
+                                                                                                                                    bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 dark:text-blue-300 dark:border-blue-800
+                                                                                                                                    font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center cursor-pointer
+                                                                                                                                ">
                                                         <span class="font-bold">{{ $hourData['hour'] }}</span>
                                                         <span class="text-xs mt-1">Disponible</span>
                                                     </button>
@@ -164,10 +164,12 @@
 
                                     <div class="bg-gray-50 dark:bg-neutral-700 p-3 rounded-md">
                                         <p class="font-semibold text-gray-900 dark:text-gray-200">
-                                            {{ $reservationCourtName }}</p>
+                                            {{ $reservationCourtName }}
+                                        </p>
                                         <p class="text-sm text-gray-600 dark:text-gray-400">
                                             {{ \Carbon\Carbon::parse($reservationDate)->format('d/m/Y') }} a las
-                                            {{ $reservationTime }}</p>
+                                            {{ $reservationTime }}
+                                        </p>
                                         <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Precio por hora:
                                             ${{ number_format($reservationPrice, 0, ',', '.') }}</p>
                                     </div>
@@ -196,11 +198,11 @@
                     </div>
                     <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                         <button type="button" wire:click="confirmReservation"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm">
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm cursor-pointer">
                             Confirmar Reserva
                         </button>
                         <button type="button" wire:click="closeReservationModal"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm dark:bg-neutral-600 dark:text-gray-200 dark:border-neutral-500 dark:hover:bg-neutral-500">
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm dark:bg-neutral-600 dark:text-gray-200 dark:border-neutral-500 dark:hover:bg-neutral-500 cursor-pointer">
                             Cancelar
                         </button>
                     </div>
