@@ -21,5 +21,11 @@ class Cancha extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function horarios()
+    {
+        return $this->hasMany(CanchaHorario::class);
+    }
+
 }
 

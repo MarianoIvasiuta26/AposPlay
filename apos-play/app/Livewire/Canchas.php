@@ -14,6 +14,10 @@ class Canchas extends Component
     public $tipo;
     public $cantidad_jugadores;
 
+    // Estado
+    public $canchaId = null;
+    public $isEditing = false;
+
     // UI
     public $showForm = false;
     public $showConfirmModal = false;
@@ -33,35 +37,69 @@ class Canchas extends Component
         ]);
     }
 
-    // Paso 3 – Crear cancha
     public function crearCancha()
     {
         $this->resetForm();
+        $this->canchaId = null;
+        $this->isEditing = false;
         $this->showForm = true;
     }
 
-    // Paso 5 → 6
+    public function editarCancha($id)
+    {
+        $cancha = Cancha::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $this->canchaId = $cancha->id;
+        $this->nombre = $cancha->nombre;
+        $this->direccion = $cancha->direccion;
+        $this->precio = $cancha->precio;
+        $this->tipo = $cancha->tipo;
+        $this->cantidad_jugadores = $cancha->cantidad_jugadores;
+
+        $this->isEditing = true;
+        $this->showForm = true;
+    }
+
     public function confirmarGuardado()
     {
         $this->validate();
         $this->showConfirmModal = true;
     }
 
-    // Paso 8 → 9
     public function guardarCancha()
     {
-        Cancha::create([
-            'user_id' => auth()->id(),
-            'nombre' => $this->nombre,
-            'direccion' => $this->direccion,
-            'precio' => $this->precio,
-            'tipo' => $this->tipo,
-            'cantidad_jugadores' => $this->cantidad_jugadores,
-        ]);
+        if ($this->isEditing && $this->canchaId) {
+            $cancha = Cancha::where('id', $this->canchaId)
+                ->where('user_id', auth()->id())
+                ->firstOrFail();
 
-        session()->flash('success', 'Cancha creada correctamente.');
+            $cancha->update([
+                'nombre' => $this->nombre,
+                'direccion' => $this->direccion,
+                'precio' => $this->precio,
+                'tipo' => $this->tipo,
+                'cantidad_jugadores' => $this->cantidad_jugadores,
+            ]);
+
+            session()->flash('success', 'Cancha actualizada correctamente.');
+        } else {
+            Cancha::create([
+                'user_id' => auth()->id(),
+                'nombre' => $this->nombre,
+                'direccion' => $this->direccion,
+                'precio' => $this->precio,
+                'tipo' => $this->tipo,
+                'cantidad_jugadores' => $this->cantidad_jugadores,
+            ]);
+
+            session()->flash('success', 'Cancha creada correctamente.');
+        }
 
         $this->resetForm();
+        $this->canchaId = null;
+        $this->isEditing = false;
         $this->showForm = false;
         $this->showConfirmModal = false;
     }
