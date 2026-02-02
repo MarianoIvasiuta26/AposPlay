@@ -3,41 +3,39 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use App\Models\Cancha;
+use App\Models\Court;
 use App\Models\Dia;
-use App\Models\CanchaHorario;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CanchaHorarios extends Component
 {
-    public Cancha $cancha;
+    public Court $cancha;
     public $dias;
     public $horarios = [];
-
     public $mostrarFormulario = false;
 
+    protected $rules = [
+        'horarios.*.apertura' => 'nullable|date_format:H:i',
+        'horarios.*.cierre'   => 'nullable|date_format:H:i|after:horarios.*.apertura',
+    ];
 
-
-    protected function rules()
-    {
-        return [
-            'horarios.*.apertura' => 'nullable|date_format:H:i',
-            'horarios.*.cierre'   => 'nullable|date_format:H:i|after:horarios.*.apertura',
-        ];
-    }
-
-    public function mount(Cancha $cancha)
+    public function mount(Court $cancha)
     {
         $this->cancha = $cancha;
-        $this->dias = Dia::all();
+        $this->dias = Dia::orderBy('id')->get();
+
+        // Cargar horarios existentes desde la relación (pivote)
+        // La relación 'horarios' devuelve una colección de Dias con datos pivote
+        $horariosExistentes = $this->cancha->horarios;
 
         foreach ($this->dias as $dia) {
-            $existente = $cancha->horarios()
-                ->where('dia_id', $dia->id)
-                ->first();
+            // Buscar si este día ya tiene horario asignado
+            $asignado = $horariosExistentes->find($dia->id);
 
             $this->horarios[$dia->id] = [
-                'apertura' => $existente?->hora_apertura,
-                'cierre'   => $existente?->hora_cierre,
+                'apertura' => $asignado ? substr($asignado->pivot->hora_apertura, 0, 5) : null,
+                'cierre'   => $asignado ? substr($asignado->pivot->hora_cierre, 0, 5) : null,
             ];
         }
     }
@@ -47,27 +45,44 @@ class CanchaHorarios extends Component
         $this->mostrarFormulario = ! $this->mostrarFormulario;
     }
 
-
     public function guardar()
     {
-        $this->validate();
+        Log::info('Guardando horarios (Pivot)', ['cancha_id' => $this->cancha->id, 'data' => $this->horarios]);
+        
+        try {
+            $this->validate();
 
-        // Limpia horarios previos
-        $this->cancha->horarios()->delete();
+            DB::transaction(function () {
+                $syncData = [];
 
-        foreach ($this->horarios as $dia_id => $horario) {
-            if ($horario['apertura'] && $horario['cierre']) {
-                CanchaHorario::create([
-                    'cancha_id'     => $this->cancha->id,
-                    'dia_id'        => $dia_id,
-                    'hora_apertura'=> $horario['apertura'],
-                    'hora_cierre'  => $horario['cierre'],
-                ]);
-            }
+                foreach ($this->horarios as $dia_id => $horario) {
+                    // Si ambos campos tienen valor, preparamos para sincronizar
+                    if (!empty($horario['apertura']) && !empty($horario['cierre'])) {
+                        $syncData[$dia_id] = [
+                            'hora_apertura' => $horario['apertura'],
+                            'hora_cierre'   => $horario['cierre'],
+                        ];
+                    }
+                }
+
+                // Sincronizar dias. Esto eliminará los que no estén en $syncData y creará/actualizará los presentes.
+                $this->cancha->horarios()->sync($syncData);
+                
+                Log::info('Sync completado', ['dias_sincronizados' => array_keys($syncData)]);
+            });
+
+            session()->flash('success', 'Horarios actualizados correctamente');
+            $this->mostrarFormulario = false;
+            
+            // Recargar datos para reflejar cambios en la vista si fuera necesario (aunque Livewire lo hace)
+            $this->cancha->load('horarios');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Error guardando pivot horarios: ' . $e->getMessage());
+            session()->flash('error', 'Ocurrió un error al guardar: ' . $e->getMessage());
         }
-
-        session()->flash('success', 'Horarios guardados correctamente');
-        $this->show = false;
     }
 
     public function render()

@@ -36,4 +36,11 @@ class Court extends Model
     {
         return $this->hasMany(Reservation::class);
     }
+
+    public function horarios()
+    {
+        return $this->belongsToMany(Dia::class, 'cancha_horarios', 'cancha_id', 'dia_id')
+                    ->withPivot('hora_apertura', 'hora_cierre')
+                    ->withTimestamps();
+    }
 }

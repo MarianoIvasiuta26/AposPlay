@@ -42,7 +42,7 @@
 
         <!-- Desktop User Menu -->
         <flux:dropdown position="bottom" align="start">
-            <flux:profile :name="auth()->user()->name" :initials="auth()->user()->initials()"
+            <flux:profile :name="auth()->user()->name ?? 'Guest'" :initials="auth()->user()?->initials() ?? 'G'"
                 icon-trailing="chevrons-up-down" />
 
             <flux:menu class="w-[220px]">
@@ -52,13 +52,13 @@
                             <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
                                 <span
                                     class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                    {{ auth()->user()->initials() }}
+                                    {{ auth()->user()?->initials() ?? 'G' }}
                                 </span>
                             </span>
 
                             <div class="grid flex-1 text-start text-sm leading-tight">
-                                <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                <span class="truncate text-xs">{{ auth()->user()->email }}</span>
+                                <span class="truncate font-semibold">{{ auth()->user()->name ?? 'Guest' }}</span>
+                                <span class="truncate text-xs">{{ auth()->user()->email ?? '' }}</span>
                             </div>
                         </div>
                     </div>
@@ -90,7 +90,7 @@
         <flux:spacer />
 
         <flux:dropdown position="top" align="end">
-            <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
+            <flux:profile :initials="auth()->user()?->initials() ?? 'G'" icon-trailing="chevron-down" />
 
             <flux:menu>
                 <flux:menu.radio.group>
@@ -99,13 +99,13 @@
                             <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
                                 <span
                                     class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                    {{ auth()->user()->initials() }}
+                                    {{ auth()->user()?->initials() ?? 'G' }}
                                 </span>
                             </span>
 
                             <div class="grid flex-1 text-start text-sm leading-tight">
-                                <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                <span class="truncate text-xs">{{ auth()->user()->email }}</span>
+                                <span class="truncate font-semibold">{{ auth()->user()->name ?? 'Guest' }}</span>
+                                <span class="truncate text-xs">{{ auth()->user()->email ?? '' }}</span>
                             </div>
                         </div>
                     </div>
