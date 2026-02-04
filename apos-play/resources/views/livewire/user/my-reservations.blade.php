@@ -33,6 +33,7 @@
                                 ];
                                 $statusLabels = [
                                     'pending' => 'Pendiente',
+                                    'pending_payment' => 'Pendiente de Pago',
                                     'confirmed' => 'Confirmada',
                                     'cancelled' => 'Cancelada',
                                 ];
@@ -62,11 +63,18 @@
 
                         @php
                             $reservationStart = \Carbon\Carbon::parse($reservation->reservation_date->format('Y-m-d') . ' ' . $reservation->start_time);
-                            $canCancel = in_array($status, ['pending', 'confirmed']) && now()->addHours(24)->lte($reservationStart);
+                            $canCancel = in_array($status, ['pending', 'confirmed', 'pending_payment']) && now()->addHours(24)->lte($reservationStart);
                         @endphp
 
-                        @if(in_array($status, ['pending', 'confirmed']))
-                            <div class="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                        @if(in_array($status, ['pending', 'confirmed', 'pending_payment']))
+                            <div class="pt-4 border-t border-gray-100 dark:border-zinc-800 flex gap-2">
+                                @if(in_array($status, ['pending', 'pending_payment']))
+                                    <button wire:click="pay({{ $reservation->id }})"
+                                        class="w-full inline-flex justify-center items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer">
+                                        Pagar Reserva
+                                    </button>
+                                @endif
+
                                 @if($canCancel)
                                     <button wire:click="cancel({{ $reservation->id }})"
                                         wire:confirm="¿Estás seguro que deseas cancelar esta reserva?"
@@ -74,7 +82,8 @@
                                         Cancelar Reserva
                                     </button>
                                 @else
-                                    <div class="text-center text-xs text-gray-500 dark:text-gray-400 italic">
+                                    <div
+                                        class="w-full text-center text-xs text-gray-500 dark:text-gray-400 italic flex items-center justify-center">
                                         No se puede cancelar (menos de 24hs)
                                     </div>
                                 @endif

@@ -24,6 +24,11 @@
                     :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="clipboard-document-list" :href="route('admin.daily-reservations')"
+                    :current="request()->routeIs('admin.daily-reservations')" wire:navigate>
+                    {{ __('Reservas del Día (Admin)') }}
+                </flux:navlist.item>
+
             </flux:navlist.group>
         </flux:navlist>
 

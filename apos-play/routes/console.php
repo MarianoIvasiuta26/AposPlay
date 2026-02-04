@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Jobs\SendGameReminders;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::job(new SendGameReminders)->hourly();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
