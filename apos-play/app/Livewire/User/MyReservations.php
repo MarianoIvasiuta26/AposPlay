@@ -40,11 +40,33 @@ class MyReservations extends Component
             return;
         }
 
-        // If paying, refund logic would be here (for later)
+        // Refund Logic
+        $refundMessage = '';
+        if ($reservation->payment_status === 'paid' || $reservation->amount_paid > 0) {
+            try {
+                if (\Illuminate\Support\Str::startsWith($reservation->payment_id, 'sim_')) {
+                    // Simulated Refund
+                    \Illuminate\Support\Facades\Log::info("Simulated automatic refund for cancel reservation {$reservation->id}");
+                } else {
+                    // Stripe Refund
+                    auth()->user()->refund($reservation->payment_id);
+                }
 
-        $reservation->update(['status' => ReservationStatus::CANCELLED]);
+                $reservation->payment_status = 'refunded';
+                $refundMessage = ' y el dinero ha sido reembolsado';
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Error refunding reservation {$reservation->id}: " . $e->getMessage());
+                // We still cancel the reservation? Or fail? 
+                // Usually better to fail safely or mark for manual review.
+                // For now, let's proceed but warn.
+                $this->dispatch('reservation-error', message: 'Reserva cancelada pero hubo un error con el reembolso. Contacte soporte.');
+            }
+        }
 
-        $this->dispatch('reservation-cancelled', message: 'Reserva cancelada exitosamente.');
+        $reservation->status = ReservationStatus::CANCELLED->value;
+        $reservation->save();
+
+        $this->dispatch('reservation-cancelled', message: 'Reserva cancelada exitosamente' . $refundMessage . '.');
     }
 
     public function pay($reservationId)

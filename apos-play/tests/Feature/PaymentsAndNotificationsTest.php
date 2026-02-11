@@ -123,7 +123,24 @@ class PaymentsAndNotificationsTest extends TestCase
             'status' => $status,
             'total_price' => 100,
             'payment_id' => $paymentId,
+            'payment_status' => $paymentId ? 'paid' : 'pending',
             'amount_paid' => $amountPaid
         ]);
+    }
+
+    public function test_user_cancellation_triggers_automatic_refund()
+    {
+        $user = User::factory()->create();
+        // Reservation > 24h away, paid via "simulation"
+        $reservation = $this->createReservation($user, 'confirmed', now()->addHours(48), 'sim_123', 100);
+
+        Livewire::actingAs($user)
+            ->test(MyReservations::class)
+            ->call('cancel', $reservation->id)
+            ->assertDispatched('reservation-cancelled');
+
+        $reservation->refresh();
+        $this->assertEquals('cancelled', $reservation->status);
+        $this->assertEquals('refunded', $reservation->payment_status);
     }
 }
