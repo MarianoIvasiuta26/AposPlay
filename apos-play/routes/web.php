@@ -27,6 +27,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/reservas-del-dia', App\Livewire\Admin\DailyReservations::class)->name('admin.daily-reservations');
 
     Route::get('/court-availability', CourtAvailability::class)->name('court-availability');
+
+    // Mercado Pago Routes
+    Route::get('/payment/create/{reservation}', [App\Http\Controllers\MercadoPagoController::class, 'createPreference'])->name('mercadopago.create');
+    Route::get('/payment/success', [App\Http\Controllers\MercadoPagoController::class, 'success'])->name('mercadopago.success');
+    Route::get('/payment/failure', [App\Http\Controllers\MercadoPagoController::class, 'failure'])->name('mercadopago.failure');
+    Route::get('/payment/pending', [App\Http\Controllers\MercadoPagoController::class, 'pending'])->name('mercadopago.pending');
 });
 
 //Rutas de reservas

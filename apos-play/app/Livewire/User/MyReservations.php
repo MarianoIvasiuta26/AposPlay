@@ -19,7 +19,7 @@ class MyReservations extends Component
 
         // Check status
         if (
-            !in_array($reservation->status, [
+            !in_array($reservation->status->value, [
                 ReservationStatus::PENDING->value,
                 ReservationStatus::PENDING_PAYMENT->value,
                 ReservationStatus::CONFIRMED->value
@@ -44,13 +44,14 @@ class MyReservations extends Component
         $refundMessage = '';
         if ($reservation->payment_status === 'paid' || $reservation->amount_paid > 0) {
             try {
-                if (\Illuminate\Support\Str::startsWith($reservation->payment_id, 'sim_')) {
-                    // Simulated Refund
-                    \Illuminate\Support\Facades\Log::info("Simulated automatic refund for cancel reservation {$reservation->id}");
-                } else {
-                    // Stripe Refund
-                    auth()->user()->refund($reservation->payment_id);
-                }
+                // TODO: Implement Mercado Pago Refund
+                // if (Str::startsWith($reservation->payment_id, 'mercadopago_')) {
+                //      $client = new \MercadoPago\Client\Payment\PaymentClient();
+                //      $client->refund($reservation->payment_id);
+                // }
+
+                // Temporary Simulation for testing structure
+                \Illuminate\Support\Facades\Log::info("Simulated MercadoPago refund for cancel reservation {$reservation->id}");
 
                 $reservation->payment_status = 'refunded';
                 $refundMessage = ' y el dinero ha sido reembolsado';
@@ -63,7 +64,7 @@ class MyReservations extends Component
             }
         }
 
-        $reservation->status = ReservationStatus::CANCELLED->value;
+        $reservation->status = ReservationStatus::CANCELLED;
         $reservation->save();
 
         $this->dispatch('reservation-cancelled', message: 'Reserva cancelada exitosamente' . $refundMessage . '.');
@@ -75,24 +76,11 @@ class MyReservations extends Component
             ->where('id', $reservationId)
             ->firstOrFail();
 
-        if ($reservation->status !== ReservationStatus::PENDING_PAYMENT->value && $reservation->status !== ReservationStatus::PENDING->value) {
+        if ($reservation->status->value !== ReservationStatus::PENDING_PAYMENT->value && $reservation->status->value !== ReservationStatus::PENDING->value) {
             return;
         }
 
-        // SIMULATED PAYMENT (Since User cannot use Stripe in Argentina)
-        // In a real app, this would be MercadoPago SDK or similar.
-
-        $reservation->update([
-            'status' => ReservationStatus::CONFIRMED->value,
-            'payment_status' => 'paid',
-            'payment_id' => 'sim_' . \Illuminate\Support\Str::random(10),
-            'amount_paid' => $reservation->total_price
-        ]);
-
-        $this->dispatch('reservation-paid', message: 'Reserva pagada exitosamente (Simulación).');
-
-        // Reload to show changes
-        return redirect()->route('my-reservations');
+        return redirect()->route('mercadopago.create', ['reservation' => $reservation->id]);
     }
 
     public function render()

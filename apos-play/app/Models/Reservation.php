@@ -26,7 +26,8 @@ class Reservation extends Model
 
     protected $casts = [
         'reservation_date' => 'date',
-        'total_price' => 'decimal:2'
+        'total_price' => 'decimal:2',
+        'status' => \App\Enums\ReservationStatus::class,
     ];
 
     public function court()

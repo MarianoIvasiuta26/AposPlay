@@ -55,10 +55,10 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                                                        @if($reservation->status == 'confirmed') bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
-                                                                                        @elseif($reservation->status == 'cancelled') bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
-                                                                                        @else bg-gray-100 text-gray-800 @endif">
-                                        {{ ucfirst($reservation->status) }}
+                                                                                                @if($reservation->status->value == 'confirmed') bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
+                                                                                                @elseif($reservation->status->value == 'cancelled') bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                                                                                                @else bg-gray-100 text-gray-800 @endif">
+                                        {{ ucfirst($reservation->status->value) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -73,12 +73,12 @@
                                         $hoursUntilStart = now()->diffInHours($reservationStart, false);
                                     @endphp
 
-                                    @if($reservation->status == 'confirmed' && $reservation->payment_id && $hoursUntilStart >= 2)
+                                    @if($reservation->status->value == 'confirmed' && $reservation->payment_id && $hoursUntilStart >= 2)
                                         <button wire:click="confirmRefund({{ $reservation->id }})"
                                             class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 cursor-pointer">
                                             Reembolsar
                                         </button>
-                                    @elseif($hoursUntilStart < 2 && $reservation->status == 'confirmed')
+                                    @elseif($hoursUntilStart < 2 && $reservation->status->value == 'confirmed')
                                         <span class="text-gray-400 cursor-not-allowed" title="Menos de 2 horas">No
                                             reembolsable</span>
                                     @endif

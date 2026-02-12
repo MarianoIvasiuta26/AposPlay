@@ -74,18 +74,14 @@ class DailyReservations extends Component
                 $type = 'partial_refunded';
             }
 
-            // SIMULACION or STRIPE
-            if (Str::startsWith($reservation->payment_id, 'sim_')) {
-                // Mock Refund
-                Log::info("Simulated refund of $refundAmount for reservation {$reservation->id}");
-            } else {
-                // Stripe Refund
-                if ($type == 'refunded') {
-                    $user->refund($reservation->payment_id);
-                } else {
-                    $user->refund($reservation->payment_id, ['amount' => (int) ($refundAmount * 100)]);
-                }
-            }
+            // TODO: Implement Mercado Pago Refund
+            // if (Str::startsWith($reservation->payment_id, 'mercadopago_')) {
+            //      $client = new \MercadoPago\Client\Payment\PaymentClient();
+            //      $client->refund($reservation->payment_id, $refundAmount);
+            // }
+
+            // Temporary Simulation for testing structure
+            Log::info("Simulated MercadoPago refund of $refundAmount for reservation {$reservation->id}");
 
             $reservation->update([
                 'status' => ReservationStatus::CANCELLED,

@@ -5,6 +5,26 @@
         </h2>
     </div>
 
+    @if (session('success'))
+        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
+            role="alert">
+            <span class="font-medium">¡Éxito!</span> {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+            <span class="font-medium">Error:</span> {{ session('error') }}
+        </div>
+    @endif
+
+    @if (session('warning'))
+        <div class="p-4 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50 dark:bg-gray-800 dark:text-yellow-300"
+            role="alert">
+            <span class="font-medium">Atención:</span> {{ session('warning') }}
+        </div>
+    @endif
+
     @if($reservations->isEmpty())
         <div
             class="bg-white dark:bg-zinc-900 overflow-hidden shadow-sm sm:rounded-lg p-6 text-center text-gray-500 dark:text-gray-400">
@@ -37,7 +57,7 @@
                                     'confirmed' => 'Confirmada',
                                     'cancelled' => 'Cancelada',
                                 ];
-                                $status = $reservation->status;
+                                $status = $reservation->status->value;
                             @endphp
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$status] ?? 'bg-gray-100 text-gray-800' }}">
