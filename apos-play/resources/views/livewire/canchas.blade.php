@@ -81,7 +81,7 @@
                     Jugadores: {{ $cancha->number_players }}
                 </p>
 
-                <livewire:cancha-horarios :cancha="$cancha" :key="'horarios-'.$cancha->id"/>
+                <livewire:court-schedules :court="$cancha" :key="'schedules-'.$cancha->id"/>
             </div>
         @endforeach
     </div>

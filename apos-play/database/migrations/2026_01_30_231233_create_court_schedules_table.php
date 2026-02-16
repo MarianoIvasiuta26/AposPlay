@@ -11,22 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cancha_horarios', function (Blueprint $table) {
+        Schema::create('court_schedules', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('cancha_id')
+            $table->foreignId('court_id')
                 ->constrained()
                 ->onDelete('cascade');
 
-            $table->foreignId('dia_id')
+            $table->foreignId('day_id')
                 ->constrained('dias');
 
-            $table->time('hora_apertura');
-            $table->time('hora_cierre');
+            // Turno 1 (Principal)
+            $table->time('start_time_1')->nullable();
+            $table->time('end_time_1')->nullable();
+
+            // Turno 2 (Secundario/Tarde)
+            $table->time('start_time_2')->nullable();
+            $table->time('end_time_2')->nullable();
 
             $table->timestamps();
         });
-
     }
 
     /**
@@ -34,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cancha_horarios');
+        Schema::dropIfExists('court_schedules');
     }
 };

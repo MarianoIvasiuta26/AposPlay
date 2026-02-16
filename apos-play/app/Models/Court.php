@@ -27,6 +27,7 @@ class Court extends Model
         return $this->hasMany(CourtsXAdmin::class);
     }
 
+    // Deprecated? Keeping for backward compatibility if other code uses it, or removing. User asked to remove schedule logic before, but now restoring with new structure.
     public function schedulesXCourt()
     {
         return $this->hasMany(SchedulesXCourt::class);
@@ -37,10 +38,11 @@ class Court extends Model
         return $this->hasMany(Reservation::class);
     }
 
-    public function horarios()
+    // New relationship for Pivot
+    public function schedules()
     {
-        return $this->belongsToMany(Dia::class, 'cancha_horarios', 'cancha_id', 'dia_id')
-                    ->withPivot('hora_apertura', 'hora_cierre')
+        return $this->belongsToMany(Dia::class, 'court_schedules', 'court_id', 'day_id')
+                    ->withPivot('start_time_1', 'end_time_1', 'start_time_2', 'end_time_2')
                     ->withTimestamps();
     }
 }
