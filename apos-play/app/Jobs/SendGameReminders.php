@@ -10,6 +10,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class SendGameReminders implements ShouldQueue
@@ -21,7 +23,9 @@ class SendGameReminders implements ShouldQueue
      */
     public function handle(): void
     {
-        // Check for 24 hours (approx) and 1 hour (approx)
+        Log::info('Starting SendGameReminders job');
+
+        // Check for 24 hours and 1 hour before the game
         // Checks executed hourly
 
         $start24 = now()->addHours(24)->startOfHour();
@@ -30,30 +34,45 @@ class SendGameReminders implements ShouldQueue
         $start1 = now()->addHour()->startOfHour();
         $end1 = now()->addHour()->endOfHour();
 
-        $this->processReminders($start24, $end24, '24 horas');
-        $this->processReminders($start1, $end1, '1 hora');
+        Log::info("24h window: {$start24->toDateTimeString()} to {$end24->toDateTimeString()}");
+        Log::info("1h window: {$start1->toDateTimeString()} to {$end1->toDateTimeString()}");
+
+        $sent24h = $this->processReminders($start24, $end24, '24 horas');
+        $sent1h = $this->processReminders($start1, $end1, '1 hora');
+
+        Log::info("SendGameReminders completed - 24h: {$sent24h}, 1h: {$sent1h}");
     }
 
-    protected function processReminders($start, $end, $context)
+    protected function processReminders($start, $end, $context): int
     {
-        // Need to combine date and time columns for query
-        // Or simpler: Iterate over reservations of that DATE and filter by TIME.
-        // Given the scale, DB query is better.
-        // reservation_date is DATE, start_time is TIME.
-        // We look for rows where reservation_date = start->toDateString() AND start_time BETWEEN H:00 and H:59 ?
-        // Usually start_time is just H:00:00.
-
         $targetDate = $start->toDateString();
         $targetHour = $start->format('H'); // 14
 
         $reservations = Reservation::where('status', ReservationStatus::CONFIRMED->value)
             ->whereDate('reservation_date', $targetDate)
             ->whereRaw("HOUR(start_time) = ?", [$targetHour])
+            ->whereDoesntHave('user.notifications', function ($query) use ($context) {
+                // Evitar enviar notificaciones duplicadas
+                $query->where('type', GameReminder::class)
+                    ->where('created_at', '>=', now()->subHours(2));
+            })
             ->with(['user', 'court'])
             ->get();
 
+        $count = 0;
+
         foreach ($reservations as $reservation) {
-            $reservation->user->notify(new GameReminder($reservation, $context));
+            try {
+                $reservation->user->notify(new GameReminder($reservation, $context));
+                Log::info("Reminder sent to user {$reservation->user->id} for reservation {$reservation->id} ({$context})");
+                $count++;
+            } catch (\Exception $e) {
+                Log::error("Failed to send reminder for reservation {$reservation->id}: {$e->getMessage()}");
+            }
         }
+
+        Log::info("Processed {$count} reminders for {$context}");
+
+        return $count;
     }
 }

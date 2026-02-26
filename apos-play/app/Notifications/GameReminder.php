@@ -39,13 +39,21 @@ class GameReminder extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $dayName = $this->reservation->reservation_date->locale('es')->translatedFormat('l');
+        $formattedDate = $this->reservation->reservation_date->format('d/m/Y');
+        $formattedTime = substr($this->reservation->start_time, 0, 5);
+
         return (new MailMessage)
             ->subject('Recordatorio de partido: ' . $this->reservation->court->name)
             ->greeting('¡Hola ' . $notifiable->name . '!')
             ->line('Te recordamos que tienes una reserva para jugar en ' . $this->timeContext . '.')
-            ->line('Cancha: ' . $this->reservation->court->name)
-            ->line('Fecha: ' . $this->reservation->reservation_date->format('d/m/Y'))
-            ->line('Hora: ' . $this->reservation->start_time)
+            ->line('')
+            ->line('**Detalles de tu reserva:**')
+            ->line('• Cancha: ' . $this->reservation->court->name)
+            ->line('• Fecha: ' . $dayName . ' ' . $formattedDate)
+            ->line('• Hora: ' . $formattedTime . ' hs')
+            ->line('• Duración: ' . $this->reservation->duration_hours . ' hora(s)')
+            ->line('')
             ->line('¡Te esperamos!')
             ->action('Ver mis reservas', route('my-reservations'));
     }

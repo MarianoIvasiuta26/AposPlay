@@ -59,7 +59,7 @@ class MercadoPagoController extends Controller
                     "failure" => route('mercadopago.failure'),
                     "pending" => route('mercadopago.pending'),
                 ],
-                // "auto_return" => "approved",
+                //"auto_return" => "approved", // Blocked by Mercado Pago on localhost with APP_USR- credentials (requires HTTPS)
             ];
 
             Log::info("Preference Data being sent: " . json_encode($preferenceData));
