@@ -40,6 +40,13 @@ class User extends Authenticatable
         return $this->hasMany(Cancha::class);
     }
 
+    public function coupons()
+    {
+        return $this->belongsToMany(Coupon::class, 'coupon_user')
+            ->withPivot('used_at')
+            ->withTimestamps();
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *

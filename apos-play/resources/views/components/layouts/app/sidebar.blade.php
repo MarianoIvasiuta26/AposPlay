@@ -29,6 +29,11 @@
                     {{ __('Reservas del Día (Admin)') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="ticket" :href="route('admin.coupons')"
+                    :current="request()->routeIs('admin.coupons')" wire:navigate>
+                    {{ __('Cupones y Descuentos') }}
+                </flux:navlist.item>
+
             </flux:navlist.group>
         </flux:navlist>
 
