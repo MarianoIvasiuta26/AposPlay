@@ -82,6 +82,17 @@ class Coupon extends Model
     }
 
     /**
+     * Calculate the discount amount for a given price.
+     */
+    public function calculateDiscount(float $price): float
+    {
+        return match ($this->type) {
+            CouponType::PERCENTAGE => round($price * ((float) $this->value / 100), 2),
+            CouponType::FIXED_AMOUNT => min((float) $this->value, $price),
+        };
+    }
+
+    /**
      * Generate a unique coupon code.
      */
     public static function generateCode(): string

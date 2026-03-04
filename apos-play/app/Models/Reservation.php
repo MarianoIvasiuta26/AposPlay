@@ -21,12 +21,15 @@ class Reservation extends Model
         'payment_id',
         'amount_paid',
         'total_price',
-        'notes'
+        'notes',
+        'coupon_id',
+        'discount_amount',
     ];
 
     protected $casts = [
         'reservation_date' => 'date',
         'total_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'status' => \App\Enums\ReservationStatus::class,
     ];
 
@@ -43,5 +46,10 @@ class Reservation extends Model
     public function schedule()
     {
         return $this->belongsTo(Schedule::class);
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
     }
 }

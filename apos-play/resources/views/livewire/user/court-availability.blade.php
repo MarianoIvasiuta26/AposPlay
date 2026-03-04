@@ -186,10 +186,63 @@
                                         </select>
                                     </div>
 
+                                    {{-- Cupón de descuento --}}
+                                    <div class="pt-2 border-t border-gray-100 dark:border-neutral-700 mt-3">
+                                        @if($appliedCoupon)
+                                            <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md px-3 py-2">
+                                                <div>
+                                                    <p class="text-sm font-medium text-green-800 dark:text-green-300">
+                                                        Cupón <span class="font-mono">{{ $appliedCoupon->code }}</span> aplicado
+                                                    </p>
+                                                    <p class="text-xs text-green-600 dark:text-green-400">
+                                                        {{ $appliedCoupon->description }} — {{ $appliedCoupon->formattedValue() }} de descuento
+                                                    </p>
+                                                </div>
+                                                <button type="button" wire:click="removeCoupon"
+                                                    class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200 cursor-pointer ml-3 flex-shrink-0">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        @else
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                ¿Tenés un cupón de descuento?
+                                            </label>
+                                            <div class="flex gap-2">
+                                                <input type="text" wire:model="couponCode"
+                                                    placeholder="Ej: APOS-ABC123"
+                                                    class="flex-1 rounded-md border-gray-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white shadow-sm focus:border-green-500 focus:ring-green-500 text-sm uppercase">
+                                                <button type="button" wire:click="applyCoupon"
+                                                    class="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex-shrink-0">
+                                                    Aplicar
+                                                </button>
+                                            </div>
+                                            @error('couponCode')
+                                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                            @enderror
+                                        @endif
+                                    </div>
+
+                                    {{-- Resumen de precio --}}
                                     <div class="text-right pt-2 border-t border-gray-100 dark:border-neutral-700 mt-3">
+                                        @php
+                                            $subtotal = $reservationPrice * $reservationDuration;
+                                            $discount = $discountAmount > 0
+                                                ? $appliedCoupon->calculateDiscount($subtotal)
+                                                : 0;
+                                            $finalTotal = max(0, $subtotal - $discount);
+                                        @endphp
+                                        @if($discount > 0)
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 line-through">
+                                                ${{ number_format($subtotal, 0, ',', '.') }}
+                                            </p>
+                                            <p class="text-sm text-green-600 dark:text-green-400">
+                                                − ${{ number_format($discount, 0, ',', '.') }} de descuento
+                                            </p>
+                                        @endif
                                         <p class="text-lg font-bold text-gray-900 dark:text-white">
-                                            Total:
-                                            ${{ number_format($reservationPrice * $reservationDuration, 0, ',', '.') }}
+                                            Total: ${{ number_format($finalTotal, 0, ',', '.') }}
                                         </p>
                                     </div>
                                 </div>

@@ -4,7 +4,12 @@ rm -rf node_modules
 rm -rf vendor
 rm -rf storage/app/requests
 rm -rf storage/app/reports
+
 rm -rf storage/app/livewire-tmp
+
+# Clear stale cache files to prevent "Class not found" errors
+rm -f bootstrap/cache/packages.php
+rm -f bootstrap/cache/services.php
 
 docker run --rm -u "$(id -u):$(id -g)" -v $(pwd):/var/www/html -w /var/www/html composer:latest composer install --ignore-platform-reqs --no-scripts
 

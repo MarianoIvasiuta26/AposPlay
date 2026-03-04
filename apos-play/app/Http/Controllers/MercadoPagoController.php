@@ -48,11 +48,9 @@ class MercadoPagoController extends Controller
                         "currency_id" => "ARS"
                     ]
                 ],
-                // "payer" => [
-                //     // For Sandbox testing, use a test email different from the seller's email
-                //     // "email" => $reservation->user->email, 
-                //     "email" => "test_user_123456@testuser.com",
-                // ],
+                "payer" => [
+                    "email" => config('services.mercadopago.test_user_email') ?? $reservation->user->email,
+                ],
                 "external_reference" => (string) $reservation->id,
                 "back_urls" => [
                     "success" => route('mercadopago.success'),
