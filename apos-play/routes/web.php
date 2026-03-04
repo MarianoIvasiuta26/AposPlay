@@ -26,6 +26,8 @@ Route::middleware(['auth'])->group(function () {
     // Admin routes (should be protected by role middleware in prod)
     Route::get('/admin/reservas-del-dia', App\Livewire\Admin\DailyReservations::class)->name('admin.daily-reservations');
     Route::get('/admin/cupones', App\Livewire\Admin\Coupons::class)->name('admin.coupons');
+    Route::get('/admin/reporte-ocupacion', App\Livewire\Admin\OccupancyReport::class)->name('admin.occupancy-report');
+    Route::get('/admin/exportar-ingresos', App\Livewire\Admin\IncomeExport::class)->name('admin.income-export');
 
     Route::get('/court-availability', CourtAvailability::class)->name('court-availability');
 

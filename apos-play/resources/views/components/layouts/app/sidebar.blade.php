@@ -34,6 +34,16 @@
                     {{ __('Cupones y Descuentos') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="chart-bar" :href="route('admin.occupancy-report')"
+                    :current="request()->routeIs('admin.occupancy-report')" wire:navigate>
+                    {{ __('Reporte de Ocupación') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="arrow-down-tray" :href="route('admin.income-export')"
+                    :current="request()->routeIs('admin.income-export')" wire:navigate>
+                    {{ __('Exportar Ingresos') }}
+                </flux:navlist.item>
+
             </flux:navlist.group>
         </flux:navlist>
 
