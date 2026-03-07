@@ -224,21 +224,56 @@
                                         @endif
                                     </div>
 
+                                    {{-- Canjear puntos --}}
+                                    <div class="pt-2 border-t border-gray-100 dark:border-neutral-700 mt-3">
+                                        @php
+                                            $pointsRequired = config('loyalty.points_for_discount');
+                                            $discountPct = config('loyalty.discount_percentage');
+                                            $hasEnoughPoints = $userPointsBalance >= $pointsRequired;
+                                        @endphp
+                                        @if($hasEnoughPoints)
+                                            <label class="flex items-center gap-2 cursor-pointer">
+                                                <input type="checkbox" wire:model.live="usePoints"
+                                                    class="rounded border-gray-300 text-yellow-600 shadow-sm focus:ring-yellow-500 dark:border-neutral-600 dark:bg-neutral-700">
+                                                <span class="text-sm text-gray-700 dark:text-gray-300">
+                                                    Usar {{ $pointsRequired }} puntos ({{ $discountPct }}% de descuento)
+                                                </span>
+                                            </label>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-6">
+                                                Saldo disponible: {{ $userPointsBalance }} puntos
+                                            </p>
+                                        @else
+                                            <p class="text-sm text-gray-400 dark:text-gray-500">
+                                                Necesitás {{ $pointsRequired }} puntos para obtener {{ $discountPct }}% de descuento (tenés {{ $userPointsBalance }})
+                                            </p>
+                                        @endif
+                                    </div>
+
                                     {{-- Resumen de precio --}}
                                     <div class="text-right pt-2 border-t border-gray-100 dark:border-neutral-700 mt-3">
                                         @php
                                             $subtotal = $reservationPrice * $reservationDuration;
-                                            $discount = $discountAmount > 0
+                                            $couponDisc = $discountAmount > 0
                                                 ? $appliedCoupon->calculateDiscount($subtotal)
                                                 : 0;
-                                            $finalTotal = max(0, $subtotal - $discount);
+                                            $pointsDisc = ($usePoints && $hasEnoughPoints)
+                                                ? round($subtotal * ($discountPct / 100), 2)
+                                                : 0;
+                                            $finalTotal = max(0, $subtotal - $couponDisc - $pointsDisc);
                                         @endphp
-                                        @if($discount > 0)
+                                        @if($couponDisc > 0 || $pointsDisc > 0)
                                             <p class="text-sm text-gray-500 dark:text-gray-400 line-through">
                                                 ${{ number_format($subtotal, 0, ',', '.') }}
                                             </p>
+                                        @endif
+                                        @if($couponDisc > 0)
                                             <p class="text-sm text-green-600 dark:text-green-400">
-                                                − ${{ number_format($discount, 0, ',', '.') }} de descuento
+                                                − ${{ number_format($couponDisc, 0, ',', '.') }} cupón
+                                            </p>
+                                        @endif
+                                        @if($pointsDisc > 0)
+                                            <p class="text-sm text-yellow-600 dark:text-yellow-400">
+                                                − ${{ number_format($pointsDisc, 0, ',', '.') }} puntos
                                             </p>
                                         @endif
                                         <p class="text-lg font-bold text-gray-900 dark:text-white">

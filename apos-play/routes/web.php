@@ -22,12 +22,16 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
     Route::get('/mis-reservas', App\Livewire\User\MyReservations::class)->name('my-reservations');
+    Route::get('/mis-puntos', App\Livewire\User\LoyaltyBalance::class)->name('loyalty-balance');
 
     // Admin routes (should be protected by role middleware in prod)
     Route::get('/admin/reservas-del-dia', App\Livewire\Admin\DailyReservations::class)->name('admin.daily-reservations');
     Route::get('/admin/cupones', App\Livewire\Admin\Coupons::class)->name('admin.coupons');
     Route::get('/admin/reporte-ocupacion', App\Livewire\Admin\OccupancyReport::class)->name('admin.occupancy-report');
     Route::get('/admin/exportar-ingresos', App\Livewire\Admin\IncomeExport::class)->name('admin.income-export');
+    Route::get('/admin/promociones', App\Livewire\Admin\Promotions\Index::class)->name('admin.promotions');
+    Route::get('/admin/promociones/crear', App\Livewire\Admin\Promotions\Form::class)->name('admin.promotions.create');
+    Route::get('/admin/promociones/{promotion}/editar', App\Livewire\Admin\Promotions\Form::class)->name('admin.promotions.edit');
 
     Route::get('/court-availability', CourtAvailability::class)->name('court-availability');
 

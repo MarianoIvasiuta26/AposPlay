@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             CourtSeeder::class,
             ScheduleSeeder::class,
             ReservationSeeder::class,
+            LoyaltyPointSeeder::class,
+            PromotionSeeder::class,
         ]);
     }
 }

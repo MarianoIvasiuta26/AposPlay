@@ -40,6 +40,11 @@ class User extends Authenticatable
         return $this->hasMany(Cancha::class);
     }
 
+    public function loyaltyPoints()
+    {
+        return $this->hasMany(LoyaltyPoint::class);
+    }
+
     public function coupons()
     {
         return $this->belongsToMany(Coupon::class, 'coupon_user')

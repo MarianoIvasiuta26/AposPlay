@@ -24,12 +24,17 @@ class Reservation extends Model
         'notes',
         'coupon_id',
         'discount_amount',
+        'points_redeemed',
+        'points_discount',
+        'final_price',
     ];
 
     protected $casts = [
         'reservation_date' => 'date',
         'total_price' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'points_discount' => 'decimal:2',
+        'final_price' => 'decimal:2',
         'status' => \App\Enums\ReservationStatus::class,
     ];
 
@@ -51,5 +56,10 @@ class Reservation extends Model
     public function coupon()
     {
         return $this->belongsTo(Coupon::class);
+    }
+
+    public function loyaltyPoints()
+    {
+        return $this->hasMany(LoyaltyPoint::class);
     }
 }

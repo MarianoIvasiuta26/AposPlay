@@ -3,6 +3,7 @@
 namespace App\Livewire\User;
 
 use App\Models\Coupon;
+use App\Services\LoyaltyService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -31,6 +32,10 @@ class CourtAvailability extends Component
     public string $couponCode = '';
     public ?Coupon $appliedCoupon = null;
     public float $discountAmount = 0;
+
+    // Puntos de fidelidad
+    public bool $usePoints = false;
+    public int $userPointsBalance = 0;
 
     public function mount()
     {
@@ -101,6 +106,9 @@ class CourtAvailability extends Component
         $this->reservationCourtName = $court ? $court->name : 'Cancha';
         $this->reservationPrice     = $court ? $court->price : 0;
 
+        $this->userPointsBalance = app(LoyaltyService::class)->getBalance(auth()->user());
+        $this->usePoints = false;
+
         $this->showReservationModal = true;
     }
 
@@ -110,6 +118,7 @@ class CourtAvailability extends Component
         $this->reset([
             'reservationCourtId', 'reservationScheduleId', 'reservationDate',
             'reservationTime', 'reservationCourtName', 'reservationPrice', 'reservationDuration',
+            'usePoints', 'userPointsBalance',
         ]);
         $this->resetCoupon();
     }
@@ -225,12 +234,25 @@ class CourtAvailability extends Component
 
             // Calcular precio con descuento
             $subtotal = $this->reservationPrice * $this->reservationDuration;
-            $discount = $this->appliedCoupon
+            $couponDiscount = $this->appliedCoupon
                 ? $this->appliedCoupon->calculateDiscount($subtotal)
                 : 0;
-            $total = max(0, $subtotal - $discount);
+            $afterCoupon = max(0, $subtotal - $couponDiscount);
 
-            \App\Models\Reservation::create([
+            // Calcular descuento por puntos
+            $loyaltyService = app(LoyaltyService::class);
+            $pointsRequired = config('loyalty.points_for_discount');
+            $pointsDiscount = 0;
+            $pointsRedeemed = 0;
+
+            if ($this->usePoints && $loyaltyService->canRedeem(auth()->user(), $pointsRequired)) {
+                $pointsDiscount = round($subtotal * (config('loyalty.discount_percentage') / 100), 2);
+                $pointsRedeemed = $pointsRequired;
+            }
+
+            $finalPrice = max(0, $afterCoupon - $pointsDiscount);
+
+            $reservation = \App\Models\Reservation::create([
                 'user_id'         => auth()->id(),
                 'court_id'        => $this->reservationCourtId,
                 'schedule_id'     => $this->reservationScheduleId,
@@ -238,9 +260,12 @@ class CourtAvailability extends Component
                 'start_time'      => $this->reservationTime,
                 'duration_hours'  => $this->reservationDuration,
                 'status'          => 'pending',
-                'total_price'     => $total,
+                'total_price'     => $afterCoupon,
                 'coupon_id'       => $this->appliedCoupon?->id,
-                'discount_amount' => $discount,
+                'discount_amount' => $couponDiscount,
+                'points_redeemed' => $pointsRedeemed,
+                'points_discount' => $pointsDiscount,
+                'final_price'     => $finalPrice,
             ]);
 
             if ($this->appliedCoupon) {
@@ -248,6 +273,10 @@ class CourtAvailability extends Component
                 $this->appliedCoupon->users()->updateExistingPivot(auth()->id(), [
                     'used_at' => now(),
                 ]);
+            }
+
+            if ($pointsRedeemed > 0) {
+                $loyaltyService->redeemPoints(auth()->user(), $reservation, $pointsRedeemed);
             }
 
             session()->flash('success', '¡Reserva realizada con éxito!');

@@ -20,6 +20,9 @@
                 <flux:navlist.item icon="calendar-days" :href="route('my-reservations')"
                     :current="request()->routeIs('my-reservations')" wire:navigate>{{ __('Mis Reservas') }}
                 </flux:navlist.item>
+                <flux:navlist.item icon="star" :href="route('loyalty-balance')"
+                    :current="request()->routeIs('loyalty-balance')" wire:navigate>{{ __('Mis Puntos') }}
+                </flux:navlist.item>
                 <flux:navlist.item icon="home" :href="route('court-availability')"
                     :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
                 </flux:navlist.item>
@@ -42,6 +45,11 @@
                 <flux:navlist.item icon="arrow-down-tray" :href="route('admin.income-export')"
                     :current="request()->routeIs('admin.income-export')" wire:navigate>
                     {{ __('Exportar Ingresos') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="gift" :href="route('admin.promotions')"
+                    :current="request()->routeIs('admin.promotions*')" wire:navigate>
+                    {{ __('Promociones') }}
                 </flux:navlist.item>
 
             </flux:navlist.group>
