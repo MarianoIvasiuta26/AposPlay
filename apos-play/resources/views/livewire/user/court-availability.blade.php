@@ -66,9 +66,18 @@
                                             @foreach($hoursXCourts[$court->id][$selectedDate]['hours'] as $hourData)
                                                 @php
                                                     $isReserved = isset($hourData['status']) && $hourData['status'] === 'reserved';
+                                                    $isBlocked = isset($hourData['status']) && $hourData['status'] === 'blocked';
                                                 @endphp
 
-                                                @if($isReserved)
+                                                @if($isBlocked)
+                                                    <button disabled class="
+                                                        bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300 dark:bg-neutral-800 dark:text-neutral-600 dark:border-neutral-700
+                                                        font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center
+                                                    ">
+                                                        <span class="font-bold">{{ $hourData['hour'] }}</span>
+                                                        <span class="text-xs mt-1">No disponible</span>
+                                                    </button>
+                                                @elseif($isReserved)
                                                     <button disabled class="
                                                                                                                                 bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200 dark:bg-neutral-700 dark:text-neutral-500 dark:border-neutral-600
                                                                                                                                 font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center

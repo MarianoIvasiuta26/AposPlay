@@ -37,6 +37,14 @@ new #[Layout('components.layouts.auth')] class extends Component {
             ]);
         }
 
+        if (! Auth::user()->is_active) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'email' => __('Tu cuenta ha sido desactivada. Contacta al administrador.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 

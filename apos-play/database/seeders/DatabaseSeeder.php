@@ -18,10 +18,12 @@ class DatabaseSeeder extends Seeder
             CourtAddressSeeder::class,
             DiasSeeder::class,
             CourtSeeder::class,
+            ComplexSeeder::class,
             ScheduleSeeder::class,
             ReservationSeeder::class,
             LoyaltyPointSeeder::class,
             PromotionSeeder::class,
+            CourtBlockSeeder::class,
         ]);
     }
 }

@@ -14,12 +14,18 @@ class Court extends Model
         'price',
         'type',
         'court_address_id',
-        'number_players'
+        'number_players',
+        'complex_id',
     ];
 
     public function address()
     {
         return $this->belongsTo(CourtAddress::class, 'court_address_id');
+    }
+
+    public function complex()
+    {
+        return $this->belongsTo(Complex::class);
     }
 
     public function courtsXAdmin()
@@ -36,6 +42,11 @@ class Court extends Model
     public function reservations()
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function blocks()
+    {
+        return $this->hasMany(CourtBlock::class);
     }
 
     // New relationship for Pivot

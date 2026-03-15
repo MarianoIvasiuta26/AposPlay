@@ -17,42 +17,78 @@
             <flux:navlist.group :heading="__('')" class="grid">
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
                     wire:navigate>{{ __('Inicio') }}</flux:navlist.item>
-                <flux:navlist.item icon="calendar-days" :href="route('my-reservations')"
-                    :current="request()->routeIs('my-reservations')" wire:navigate>{{ __('Mis Reservas') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="star" :href="route('loyalty-balance')"
-                    :current="request()->routeIs('loyalty-balance')" wire:navigate>{{ __('Mis Puntos') }}
-                </flux:navlist.item>
-                <flux:navlist.item icon="home" :href="route('court-availability')"
-                    :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
-                </flux:navlist.item>
 
-                <flux:navlist.item icon="clipboard-document-list" :href="route('admin.daily-reservations')"
-                    :current="request()->routeIs('admin.daily-reservations')" wire:navigate>
-                    {{ __('Reservas del Día (Admin)') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="ticket" :href="route('admin.coupons')"
-                    :current="request()->routeIs('admin.coupons')" wire:navigate>
-                    {{ __('Cupones y Descuentos') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="chart-bar" :href="route('admin.occupancy-report')"
-                    :current="request()->routeIs('admin.occupancy-report')" wire:navigate>
-                    {{ __('Reporte de Ocupación') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="arrow-down-tray" :href="route('admin.income-export')"
-                    :current="request()->routeIs('admin.income-export')" wire:navigate>
-                    {{ __('Exportar Ingresos') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="gift" :href="route('admin.promotions')"
-                    :current="request()->routeIs('admin.promotions*')" wire:navigate>
-                    {{ __('Promociones') }}
-                </flux:navlist.item>
-
+                @if(auth()->user()?->isUser())
+                    <flux:navlist.item icon="calendar-days" :href="route('my-reservations')"
+                        :current="request()->routeIs('my-reservations')" wire:navigate>{{ __('Mis Reservas') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="star" :href="route('loyalty-balance')"
+                        :current="request()->routeIs('loyalty-balance')" wire:navigate>{{ __('Mis Puntos') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="home" :href="route('court-availability')"
+                        :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
+                    </flux:navlist.item>
+                @endif
             </flux:navlist.group>
+
+            @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER, \App\Enums\UserRole::STAFF))
+                <flux:navlist.group :heading="__('Administracion')" class="grid">
+                    <flux:navlist.item icon="clipboard-document-list" :href="route('staff.reservations')"
+                        :current="request()->routeIs('staff.reservations')" wire:navigate>
+                        {{ __('Reservas del Dia') }}
+                    </flux:navlist.item>
+                    @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER))
+                        <flux:navlist.item icon="ticket" :href="route('admin.coupons')"
+                            :current="request()->routeIs('admin.coupons')" wire:navigate>
+                            {{ __('Cupones y Descuentos') }}
+                        </flux:navlist.item>
+                        <flux:navlist.item icon="chart-bar" :href="route('admin.occupancy-report')"
+                            :current="request()->routeIs('admin.occupancy-report')" wire:navigate>
+                            {{ __('Reporte de Ocupacion') }}
+                        </flux:navlist.item>
+                        <flux:navlist.item icon="arrow-down-tray" :href="route('admin.income-export')"
+                            :current="request()->routeIs('admin.income-export')" wire:navigate>
+                            {{ __('Exportar Ingresos') }}
+                        </flux:navlist.item>
+                    @endif
+                    <flux:navlist.item icon="gift" :href="route('admin.promotions')"
+                        :current="request()->routeIs('admin.promotions*')" wire:navigate>
+                        {{ __('Promociones') }}
+                    </flux:navlist.item>
+                    @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER))
+                        <flux:navlist.item icon="lock-closed" :href="route('admin.court-blocks')"
+                            :current="request()->routeIs('admin.court-blocks*')" wire:navigate>
+                            {{ __('Bloqueos de Horario') }}
+                        </flux:navlist.item>
+                    @endif
+                </flux:navlist.group>
+            @endif
+
+            @if(auth()->user()?->isSuperadmin())
+                <flux:navlist.group :heading="__('Superadmin')" class="grid">
+                    <flux:navlist.item icon="users" :href="route('admin.owners')"
+                        :current="request()->routeIs('admin.owners*')" wire:navigate>
+                        {{ __('Gestionar Owners') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="calendar" :href="route('admin.daily-reservations')"
+                        :current="request()->routeIs('admin.daily-reservations')" wire:navigate>
+                        {{ __('Todas las Reservas') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @endif
+
+            @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER))
+                <flux:navlist.group :heading="__('Mi Complejo')" class="grid">
+                    <flux:navlist.item icon="building-office" :href="route('owner.complexes')"
+                        :current="request()->routeIs('owner.complexes*')" wire:navigate>
+                        {{ __('Complejos') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="user-group" :href="route('owner.staff')"
+                        :current="request()->routeIs('owner.staff*')" wire:navigate>
+                        {{ __('Staff') }}
+                    </flux:navlist.item>
+                </flux:navlist.group>
+            @endif
         </flux:navlist>
 
         <flux:spacer />

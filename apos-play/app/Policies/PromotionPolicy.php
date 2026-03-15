@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\UserRole;
 use App\Models\Promotion;
 use App\Models\User;
 
@@ -9,7 +10,8 @@ class PromotionPolicy
 {
     private function isAdmin(User $user): bool
     {
-        return $user->courtsXAdmin()->exists();
+        return $user->hasRole(UserRole::SUPERADMIN, UserRole::OWNER, UserRole::STAFF)
+            || $user->courtsXAdmin()->exists();
     }
 
     public function viewAny(User $user): bool

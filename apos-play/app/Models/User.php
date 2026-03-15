@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -23,6 +24,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'is_active',
     ];
 
     public function courtsXAdmin()
@@ -52,6 +55,42 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function complexesOwned()
+    {
+        return $this->hasMany(Complex::class, 'owner_id');
+    }
+
+    public function complexesStaff()
+    {
+        return $this->belongsToMany(Complex::class, 'complex_staff')
+            ->withPivot('created_at');
+    }
+
+    public function isSuperadmin(): bool
+    {
+        return $this->role === UserRole::SUPERADMIN;
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === UserRole::OWNER;
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->role === UserRole::STAFF;
+    }
+
+    public function isUser(): bool
+    {
+        return $this->role === UserRole::USER;
+    }
+
+    public function hasRole(UserRole ...$roles): bool
+    {
+        return in_array($this->role, $roles);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -72,6 +111,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
+            'is_active' => 'boolean',
         ];
     }
 

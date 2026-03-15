@@ -3,6 +3,7 @@
 namespace App\Livewire\User;
 
 use App\Models\Coupon;
+use App\Services\CourtBlockService;
 use App\Services\LoyaltyService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -221,8 +222,17 @@ class CourtAvailability extends Component
                 $this->reservationDate
             );
 
+            $blockService = app(CourtBlockService::class);
+
             for ($i = 0; $i < $this->reservationDuration; $i++) {
                 $checkTime = $startTime->copy()->addHours($i)->format('H:i');
+
+                if ($blockService->isSlotBlocked($this->reservationCourtId, $this->reservationDate, $checkTime)) {
+                    session()->flash('error', "El horario de las {$checkTime} está bloqueado y no disponible.");
+                    $this->closeReservationModal();
+                    $this->loadAvailability();
+                    return;
+                }
 
                 if ($this->isSlotTaken($checkTime, $existingReservations)) {
                     session()->flash('error', "El horario de las {$checkTime} ya está reservado. Seleccioná una menor duración u otro horario.");
@@ -342,15 +352,25 @@ class CourtAvailability extends Component
 
                         if (!isset($seenHours[$hourStr])) {
                             $seenHours[$hourStr] = true;
+
+                            $blockService = app(CourtBlockService::class);
+                            $isBlocked = $blockService->isSlotBlocked($court->id, $dateStr, $hourStr);
+
+                            if ($isBlocked) {
+                                $status = 'blocked';
+                            } elseif ($this->isSlotTaken($hourStr, $reservations)) {
+                                $status = 'reserved';
+                            } else {
+                                $status = 'available';
+                            }
+
                             $hours[] = [
                                 'hour'        => $hourStr,
                                 'date'        => $dateStr,
                                 'day_of_week' => $dayOfWeek,
                                 'turn'        => $schedule->turn,
                                 'schedule_id' => $schedule->id,
-                                'status'      => $this->isSlotTaken($hourStr, $reservations)
-                                    ? 'reserved'
-                                    : 'available',
+                                'status'      => $status,
                             ];
                         }
 

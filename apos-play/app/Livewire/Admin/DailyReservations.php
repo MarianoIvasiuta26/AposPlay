@@ -2,20 +2,17 @@
 
 namespace App\Livewire\Admin;
 
-use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Services\RefundService;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 class DailyReservations extends Component
 {
     public $selectedDate;
     public $reservationToRefund = null;
-    public $refundType = null; // 'full' or 'partial'
+    public $refundType = null;
     public $showRefundModal = false;
 
     public function mount()
@@ -26,73 +23,34 @@ class DailyReservations extends Component
     public function confirmRefund($reservationId)
     {
         $reservation = Reservation::findOrFail($reservationId);
+        $refundService = app(RefundService::class);
 
-        // Calculate hours difference for UI
-        $dateStr = $reservation->reservation_date instanceof \Carbon\Carbon
-            ? $reservation->reservation_date->format('Y-m-d')
-            : $reservation->reservation_date;
+        $refundType = $refundService->determineRefundType($reservation);
 
-        $reservationStart = Carbon::parse($dateStr . ' ' . $reservation->start_time);
-        $hoursUntilStart = now()->diffInHours($reservationStart, false);
-
-        if ($hoursUntilStart < 2) {
+        if ($refundType === null) {
             $this->dispatch('refund-error', message: 'No se puede reembolsar con menos de 2 horas de antelación.');
             return;
         }
 
         $this->reservationToRefund = $reservation;
-        $this->refundType = $hoursUntilStart >= 8 ? 'full' : 'partial';
+        $this->refundType = $refundType;
 
         $this->dispatch('open-modal', name: 'refund-modal');
     }
 
     public function processRefund()
     {
-        if (!$this->reservationToRefund)
-            return;
-
-        $reservation = $this->reservationToRefund;
-
-        // Re-check logic safety
-        if (!$reservation->payment_id) {
-            $this->dispatch('refund-error', message: 'Esta reserva no tiene un pago asociado.');
+        if (!$this->reservationToRefund) {
             return;
         }
 
-        try {
-            $user = $reservation->user;
+        $refundService = app(RefundService::class);
+        $result = $refundService->processRefund($this->reservationToRefund, $this->refundType);
 
-            $refundAmount = 0;
-            $type = '';
-
-            // Recalculate to be safe or use stored type
-            if ($this->refundType === 'full') {
-                $refundAmount = $reservation->amount_paid;
-                $type = 'refunded';
-            } else {
-                $refundAmount = $reservation->amount_paid * 0.5;
-                $type = 'partial_refunded';
-            }
-
-            // TODO: Implement Mercado Pago Refund
-            // if (Str::startsWith($reservation->payment_id, 'mercadopago_')) {
-            //      $client = new \MercadoPago\Client\Payment\PaymentClient();
-            //      $client->refund($reservation->payment_id, $refundAmount);
-            // }
-
-            // Temporary Simulation for testing structure
-            Log::info("Simulated MercadoPago refund of $refundAmount for reservation {$reservation->id}");
-
-            $reservation->update([
-                'status' => ReservationStatus::CANCELLED,
-                'payment_status' => $type
-            ]);
-
-            $this->dispatch('refund-success', message: 'Reembolso exitoso (' . ($type == 'refunded' ? 'Total' : 'Parcial') . ').');
-
-        } catch (\Exception $e) {
-            Log::error("Refund failed: " . $e->getMessage());
-            $this->dispatch('refund-error', message: 'Error al procesar el reembolso: ' . $e->getMessage());
+        if ($result['success']) {
+            $this->dispatch('refund-success', message: $result['message']);
+        } else {
+            $this->dispatch('refund-error', message: $result['message']);
         }
 
         $this->reset(['reservationToRefund', 'refundType', 'showRefundModal']);
@@ -101,11 +59,8 @@ class DailyReservations extends Component
 
     public function refund($reservationId)
     {
-        // Legacy method kept if needed or we can replace it.
-        // Let's replace usage in blade.
         $this->confirmRefund($reservationId);
     }
-
 
     public function render()
     {

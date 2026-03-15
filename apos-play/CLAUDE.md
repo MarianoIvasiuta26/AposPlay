@@ -292,3 +292,48 @@ START WITH UC-18:
 1. **UC-18** — creates LoyaltyPoint, LoyaltyService, ReservationObserver
 2. **UC-19** — extends LoyaltyService, modifies CourtAvailability modal (depends on UC-18)
 3. **UC-20** — creates Promotion, PromotionService, admin views (independent but last)
+
+## Roles & Permissions Module
+
+### Roles
+- `superadmin` — Full system access. Created manually via seeder. Creates owner accounts.
+- `owner` — Manages their own complexes and staff. Can have multiple complexes.
+- `staff` — Access scoped to assigned complex only. Cannot manage other complexes.
+- `user` — End user. Can browse courts and make reservations.
+
+### Data Model
+- `users.role` → enum: superadmin, owner, staff, user
+- `complexes` table: id, name, owner_id (FK users), address, active, timestamps, soft deletes
+- `complex_staff` pivot: complex_id, user_id, created_at
+
+### Key Constraints
+- Staff access is always scoped to their complex via complex_staff pivot
+- Owner can only manage complexes where complexes.owner_id = auth()->id()
+- Superadmin bypasses all scoping
+- courts table must add complex_id FK (migration, not breaking change)
+- Use Laravel Policies for all authorization checks
+- Use middleware role:owner,staff etc. on route groups
+
+### Policies to Create
+- ComplexPolicy: owner/superadmin can manage, staff can view
+- CourtPolicy: scoped to complex ownership
+- StaffPolicy: owner and superadmin can create/delete staff
+- ReservationPolicy: staff/owner see their complex, user sees their own
+
+### UC-21: Gestionar Roles (superadmin)
+- Superadmin puede crear cuenta de owner (nombre, email, password, asignar complejo)
+- Superadmin puede ver todos los owners y sus complejos
+- Superadmin puede desactivar un owner (bloquea acceso sin borrar datos)
+
+### UC-22: Gestionar Staff (owner + superadmin)
+- Owner puede crear cuentas staff para sus complejos
+- Owner puede asignar staff a uno o varios de sus complejos
+- Owner puede revocar acceso de staff
+- Staff ve solo el complejo al que está asignado
+
+### UC-23: Panel por Rol
+- Superadmin: /admin/* — ve todo
+- Owner: /owner/* — ve solo sus complejos
+- Staff: /staff/* — ve solo su complejo asignado
+- User: /reservas/* — ve solo sus reservas
+```

@@ -4,7 +4,9 @@ namespace App\Observers;
 
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Notifications\CancellationNotification;
 use App\Services\LoyaltyService;
+use Illuminate\Support\Facades\Notification;
 
 class ReservationObserver
 {
@@ -24,6 +26,22 @@ class ReservationObserver
 
         if ($reservation->status === ReservationStatus::CANCELLED) {
             $this->loyaltyService->reversePoints($reservation);
+            $this->notifyStaffOfCancellation($reservation);
+        }
+    }
+
+    private function notifyStaffOfCancellation(Reservation $reservation): void
+    {
+        $complex = $reservation->court?->complex;
+
+        if (!$complex) {
+            return;
+        }
+
+        $staffMembers = $complex->staff;
+
+        if ($staffMembers->isNotEmpty()) {
+            Notification::send($staffMembers, new CancellationNotification($reservation));
         }
     }
 }
