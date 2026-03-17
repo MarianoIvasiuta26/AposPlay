@@ -14,6 +14,7 @@ class CourtSchedules extends Component
     public $days;
     public $schedules = [];
     public $showForm = false;
+    public bool $standalone = false;
 
     protected $rules = [
         'schedules.*.active'       => 'boolean',
@@ -26,6 +27,19 @@ class CourtSchedules extends Component
     public function mount(Court $court)
     {
         $this->court = $court;
+        $this->standalone = request()->routeIs('court.schedules');
+
+        // Verify ownership
+        $esPropia = $this->court->courtsXAdmin()->where('user_id', auth()->id())->exists();
+        if (!$esPropia) {
+            abort(403);
+        }
+
+        // If standalone (accessed via route), show form immediately
+        if ($this->standalone) {
+            $this->showForm = true;
+        }
+
         $this->days = Dia::orderBy('id')->get();
 
         // Load existing schedules from pivot
@@ -82,10 +96,15 @@ class CourtSchedules extends Component
             });
 
             session()->flash('success', 'Horarios guardados correctamente');
-            $this->showForm = false;
-            
+
             // Reload relationship
             $this->court->load('schedules');
+
+            if ($this->standalone) {
+                return $this->redirect(route('canchas'), navigate: true);
+            }
+
+            $this->showForm = false;
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -97,6 +116,12 @@ class CourtSchedules extends Component
 
     public function render()
     {
-        return view('livewire.court-schedules');
+        $view = view('livewire.court-schedules');
+
+        if ($this->standalone) {
+            return $view->layout('components.layouts.app', ['title' => 'Horarios - ' . $this->court->name]);
+        }
+
+        return $view;
     }
 }

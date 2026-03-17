@@ -81,7 +81,14 @@
                     Jugadores: {{ $cancha->number_players }}
                 </p>
 
-                <livewire:court-schedules :court="$cancha" :key="'schedules-'.$cancha->id"/>
+                <div class="mt-3 flex items-center gap-3">
+                    <livewire:court-schedules :court="$cancha" :key="'schedules-'.$cancha->id"/>
+                    <a href="{{ route('court.schedules', $cancha) }}"
+                       class="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition"
+                       wire:navigate>
+                        Ver horarios
+                    </a>
+                </div>
             </div>
         @endforeach
     </div>

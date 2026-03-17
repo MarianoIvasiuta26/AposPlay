@@ -1,19 +1,20 @@
 <div>
-    {{-- Trigger Button --}}
-    <button
-        wire:click="toggle"
-        class="text-sm font-medium text-green-600 hover:text-green-700
-            dark:text-green-400 dark:hover:text-green-300 transition"
-    >
-        Definir horarios
-    </button>
+    @if (!$standalone)
+        {{-- Trigger Button (embedded mode) --}}
+        <button
+            wire:click="toggle"
+            class="text-sm font-medium text-green-600 hover:text-green-700
+                dark:text-green-400 dark:hover:text-green-300 transition"
+        >
+            Definir horarios
+        </button>
+    @endif
 
-    {{-- Modal --}}
+    {{-- Modal / Standalone Content --}}
     @if ($showForm)
-        <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4 backdrop-blur-sm bg-black/40">
-            <!-- Modal Content -->
-            <div class="relative w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700">
-                
+        <div class="{{ $standalone ? '' : 'fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4 backdrop-blur-sm bg-black/40' }}">
+            <div class="relative w-full max-w-4xl rounded-xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 {{ $standalone ? 'mx-auto' : '' }}">
+
                 {{-- Header --}}
                 <div class="mb-5 flex items-center justify-between border-b border-gray-100 dark:border-zinc-800 pb-3">
                     <div>
@@ -21,14 +22,22 @@
                             Configurar Horarios de Atención
                         </h3>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Define los turnos de mañana y tarde para cada día.
+                            {{ $court->name }} — Define los turnos de mañana y tarde para cada día.
                         </p>
                     </div>
-                    <button wire:click="toggle" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    @if ($standalone)
+                        <a href="{{ route('canchas') }}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition" wire:navigate>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                            </svg>
+                        </a>
+                    @else
+                        <button wire:click="toggle" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    @endif
                 </div>
 
                 {{-- Form Body --}}
@@ -122,12 +131,20 @@
 
                 {{-- Footer / Actions --}}
                 <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                    <button
-                        wire:click="toggle"
-                        class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition"
-                    >
-                        Cancelar
-                    </button>
+                    @if ($standalone)
+                        <a href="{{ route('canchas') }}"
+                            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition"
+                            wire:navigate>
+                            Volver a Canchas
+                        </a>
+                    @else
+                        <button
+                            wire:click="toggle"
+                            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700 transition"
+                        >
+                            Cancelar
+                        </button>
+                    @endif
 
                     <button
                         wire:click="save"

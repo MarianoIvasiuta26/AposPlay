@@ -75,7 +75,11 @@ Route::middleware(['auth', 'role:superadmin,owner,staff'])->prefix('staff')->gro
     Route::get('/reservas', App\Livewire\Staff\Reservations::class)->name('staff.reservations');
 });
 
-// Public routes
-Route::get('/canchas', Canchas::class)->name('canchas');
+// UC-06: Gestionar canchas (admin/owner only)
+Route::middleware(['auth', 'role:superadmin,owner'])->group(function () {
+    Route::get('/canchas', Canchas::class)->name('canchas');
+    // UC-07: Definir horarios de atención (standalone page)
+    Route::get('/canchas/{court}/horarios', App\Livewire\CourtSchedules::class)->name('court.schedules');
+});
 
 require __DIR__ . '/auth.php';

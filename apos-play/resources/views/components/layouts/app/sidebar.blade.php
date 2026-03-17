@@ -83,6 +83,10 @@
                         :current="request()->routeIs('owner.complexes*')" wire:navigate>
                         {{ __('Complejos') }}
                     </flux:navlist.item>
+                    <flux:navlist.item icon="map-pin" :href="route('canchas')"
+                        :current="request()->routeIs('canchas')" wire:navigate>
+                        {{ __('Mis Canchas') }}
+                    </flux:navlist.item>
                     <flux:navlist.item icon="user-group" :href="route('owner.staff')"
                         :current="request()->routeIs('owner.staff*')" wire:navigate>
                         {{ __('Staff') }}
