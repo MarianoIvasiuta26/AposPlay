@@ -56,8 +56,7 @@
                 <div class="text-sm text-gray-600 dark:text-neutral-400 mb-4">
                     @if($cancha->address)
                         <p>{{ $cancha->address->street }} {{ $cancha->address->number }}</p>
-                        <p>{{ $cancha->address->city }}, {{ $cancha->address->province }}</p>
-                        <p>{{ $cancha->address->country }} ({{ $cancha->address->zip_code }})</p>
+                        <p>Apostoles, Misiones, Argentina</p>
                     @else
                         <span class="italic text-gray-400">Sin dirección</span>
                     @endif
@@ -167,7 +166,7 @@
                         </h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <!-- Calle -->
-                            <div class="md:col-span-1">
+                            <div>
                                 <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-neutral-300">
                                     Calle
                                 </label>
@@ -184,42 +183,16 @@
                                 @error('number') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
                             </div>
 
-                            <!-- Ciudad -->
-                            <div>
-                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-neutral-300">
-                                    Ciudad
-                                </label>
-                                <input type="text" wire:model="city" class="w-full rounded-lg border px-3 py-2 bg-white text-gray-900 border-neutral-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
-                                @error('city') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
-                            <!-- Provincia -->
-                            <div>
-                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-neutral-300">
-                                    Provincia
-                                </label>
-                                <input type="text" wire:model="province" class="w-full rounded-lg border px-3 py-2 bg-white text-gray-900 border-neutral-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
-                                @error('province') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                            </div>
-
                             <!-- Código Postal -->
-                            <div>
+                            <div class="md:col-span-2">
                                 <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-neutral-300">
-                                    Código Postal
+                                    Código Postal <span class="text-gray-400 font-normal">(opcional)</span>
                                 </label>
-                                <input type="text" wire:model="zip_code" class="w-full rounded-lg border px-3 py-2 bg-white text-gray-900 border-neutral-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
+                                <input type="text" wire:model="zip_code" placeholder="Ej: 3300" class="w-full rounded-lg border px-3 py-2 bg-white text-gray-900 border-neutral-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
                                 @error('zip_code') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
                             </div>
-
-                            <!-- País -->
-                            <div>
-                                <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-neutral-300">
-                                    País
-                                </label>
-                                <input type="text" wire:model="country" class="w-full rounded-lg border px-3 py-2 bg-white text-gray-900 border-neutral-300 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
-                                @error('country') <span class="text-sm text-red-500">{{ $message }}</span> @enderror
-                            </div>
                         </div>
+                        <p class="mt-3 text-xs text-gray-400 dark:text-neutral-500">Todas las canchas son en Apostoles, Misiones, Argentina.</p>
                     </div>
 
                     <!-- Botones -->

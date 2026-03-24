@@ -86,7 +86,7 @@
             <div class="max-w-4xl mx-auto text-center">
                 <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-10">
                     <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                    <span class="text-sm font-medium text-green-300">Reservas abiertas 24/7</span>
+                    <span class="text-sm font-medium text-green-300">Apostoles, Misiones · Reservas abiertas 24/7</span>
                 </div>
 
                 <h1 class="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05]">
@@ -95,7 +95,7 @@
                     <span class="text-green-400">en minutos</span>
                 </h1>
                 <p class="mt-8 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-                    Explora canchas de futbol y padel en toda Argentina, consulta disponibilidad en tiempo real y reserva tu horario al instante con pago seguro via Mercado Pago.
+                    La plataforma de canchas de futbol y padel de <span class="text-white font-medium">Apostoles, Misiones</span>. Consulta disponibilidad en tiempo real y reserva tu horario al instante con pago seguro via Mercado Pago.
                 </p>
                 <div class="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="#canchas"
@@ -117,7 +117,7 @@
                     $totalCourts = \App\Models\Court::count();
                     $totalComplexes = \App\Models\Complex::where('active', true)->count();
                     $totalUsers = \App\Models\User::where('role', 'user')->count();
-                    $cities = \App\Models\CourtAddress::distinct('city')->count('city');
+                    $totalReservations = \App\Models\Reservation::count();
                 @endphp
                 <div class="rounded-xl border border-green-500/30 bg-green-950/30 p-5 sm:p-6 text-center">
                     <p class="text-3xl sm:text-4xl font-bold text-green-400">{{ $totalCourts }}</p>
@@ -128,12 +128,12 @@
                     <p class="mt-1 text-sm text-neutral-400">Complejos</p>
                 </div>
                 <div class="rounded-xl border border-red-500/30 bg-red-950/30 p-5 sm:p-6 text-center">
-                    <p class="text-3xl sm:text-4xl font-bold text-red-400">{{ $cities }}</p>
-                    <p class="mt-1 text-sm text-neutral-400">Ciudades</p>
+                    <p class="text-3xl sm:text-4xl font-bold text-red-400">{{ $totalUsers }}+</p>
+                    <p class="mt-1 text-sm text-neutral-400">Jugadores</p>
                 </div>
                 <div class="rounded-xl border border-neutral-700 bg-neutral-900/50 p-5 sm:p-6 text-center">
-                    <p class="text-3xl sm:text-4xl font-bold text-white">{{ $totalUsers }}+</p>
-                    <p class="mt-1 text-sm text-neutral-400">Jugadores</p>
+                    <p class="text-3xl sm:text-4xl font-bold text-white">{{ $totalReservations }}+</p>
+                    <p class="mt-1 text-sm text-neutral-400">Reservas</p>
                 </div>
             </div>
         </div>
@@ -321,9 +321,9 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-14 sm:mb-18">
                 <span class="inline-block px-4 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider mb-5">Para duenos de complejos</span>
-                <h2 class="text-3xl sm:text-5xl font-bold text-white">Tenes un complejo deportivo?</h2>
+                <h2 class="text-3xl sm:text-5xl font-bold text-white">Tenes un complejo en Apostoles?</h2>
                 <p class="mt-4 text-lg text-neutral-400 max-w-2xl mx-auto">
-                    Suma tus canchas a AposPlay y accede a un panel completo para gestionar reservas, staff, reportes de ocupacion e ingresos.
+                    Suma tus canchas a AposPlay y accede a un panel completo para gestionar reservas, staff, reportes de ocupacion e ingresos. Solo para complejos de <span class="text-white font-medium">Apostoles, Misiones</span>.
                 </p>
             </div>
 
@@ -366,63 +366,7 @@
             {{-- Contact form card - full width --}}
             <div class="bg-neutral-950 rounded-2xl p-8 sm:p-12 border border-neutral-800">
                 <div class="max-w-3xl mx-auto">
-                    <div class="text-center mb-8">
-                        <div class="w-16 h-16 mx-auto flex items-center justify-center rounded-xl bg-red-600 text-white mb-5">
-                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold text-white mb-3">Solicita tu cuenta Owner</h3>
-                        <p class="text-base text-neutral-400">Completa los datos de tu complejo y te crearemos una cuenta de administrador.</p>
-                    </div>
-
-                    <form id="owner-form" class="space-y-5">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Nombre del complejo</label>
-                                <input type="text" id="complex-name" placeholder="Ej: Complejo Deportivo Norte"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Ciudad</label>
-                                <input type="text" id="complex-city" placeholder="Ej: Buenos Aires"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Direccion</label>
-                                <input type="text" id="complex-address" placeholder="Ej: Av. Libertador 1234"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Cantidad y tipo de canchas</label>
-                                <input type="text" id="complex-courts" placeholder="Ej: 3 futbol, 2 padel"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Nombre del responsable</label>
-                                <input type="text" id="contact-name" placeholder="Tu nombre completo"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-neutral-300 mb-2">Telefono de contacto</label>
-                                <input type="text" id="contact-phone" placeholder="Ej: +54 11 1234-5678"
-                                    class="w-full px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
-                            </div>
-                        </div>
-
-                        <button type="button" onclick="sendOwnerEmail()"
-                            class="w-full flex items-center justify-center gap-2 px-6 py-4 text-lg font-bold rounded-xl bg-red-600 text-white hover:bg-red-500 transition cursor-pointer mt-8">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                            </svg>
-                            Enviar solicitud por email
-                        </button>
-                        <p class="text-sm text-neutral-500 text-center">Se abrira tu cliente de correo con los datos pre-cargados a <span class="text-neutral-400">admin@aposplay.com</span></p>
-                    </form>
+                    @livewire('owner-contact')
                 </div>
             </div>
         </div>
@@ -450,23 +394,6 @@
         </div>
     </footer>
 
-    <script>
-        function sendOwnerEmail() {
-            const name = document.getElementById('complex-name')?.value || '';
-            const city = document.getElementById('complex-city')?.value || '';
-            const address = document.getElementById('complex-address')?.value || '';
-            const courts = document.getElementById('complex-courts')?.value || '';
-            const contact = document.getElementById('contact-name')?.value || '';
-            const phone = document.getElementById('contact-phone')?.value || '';
-
-            const subject = encodeURIComponent('Solicitud cuenta Owner - AposPlay');
-            const body = encodeURIComponent(
-                `Hola equipo AposPlay,\n\nMe gustaría solicitar una cuenta Owner para gestionar mi complejo deportivo.\n\nNombre del complejo: ${name}\nDirección: ${address}\nCiudad: ${city}\nCantidad de canchas: ${courts}\nNombre del responsable: ${contact}\nTeléfono de contacto: ${phone}\n\nGracias!`
-            );
-
-            window.location.href = `mailto:admin@aposplay.com?subject=${subject}&body=${body}`;
-        }
-    </script>
 
 </body>
 </html>

@@ -19,10 +19,7 @@ class Canchas extends Component
     // Formulario Dirección
     public $street;
     public $number;
-    public $city;
-    public $province;
     public $zip_code;
-    public $country;
 
     // Estado
     public $courtId = null;
@@ -42,10 +39,7 @@ class Canchas extends Component
         // Validaciones Dirección
         'street' => 'required|string|max:255',
         'number' => 'required|string|max:50',
-        'city' => 'required|string|max:255',
-        'province' => 'required|string|max:255',
-        'zip_code' => 'required|string|max:20',
-        'country' => 'required|string|max:255',
+        'zip_code' => 'nullable|string|max:20',
     ];
 
     public function render()
@@ -90,10 +84,7 @@ class Canchas extends Component
         if ($cancha->address) {
             $this->street = $cancha->address->street;
             $this->number = $cancha->address->number;
-            $this->city = $cancha->address->city;
-            $this->province = $cancha->address->province;
             $this->zip_code = $cancha->address->zip_code;
-            $this->country = $cancha->address->country;
         }
 
         $this->isEditing = true;
@@ -124,10 +115,10 @@ class Canchas extends Component
                 $cancha->address->update([
                     'street' => $this->street,
                     'number' => $this->number,
-                    'city' => $this->city,
-                    'province' => $this->province,
+                    'city' => 'Apostoles',
+                    'province' => 'Misiones',
                     'zip_code' => $this->zip_code,
-                    'country' => $this->country,
+                    'country' => 'Argentina',
                 ]);
 
                 // Actualizar cancha
@@ -144,10 +135,10 @@ class Canchas extends Component
                 $address = CourtAddress::create([
                     'street' => $this->street,
                     'number' => $this->number,
-                    'city' => $this->city,
-                    'province' => $this->province,
+                    'city' => 'Apostoles',
+                    'province' => 'Misiones',
                     'zip_code' => $this->zip_code,
-                    'country' => $this->country,
+                    'country' => 'Argentina',
                 ]);
 
                 // Crear cancha
@@ -185,10 +176,7 @@ class Canchas extends Component
             'cantidad_jugadores',
             'street',
             'number',
-            'city',
-            'province',
             'zip_code',
-            'country',
         ]);
     }
 }

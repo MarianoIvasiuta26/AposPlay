@@ -73,6 +73,13 @@ Route::middleware(['auth', 'role:superadmin,owner'])->prefix('owner')->group(fun
     Route::get('/complejos', App\Livewire\Owner\Complexes\Index::class)->name('owner.complexes');
     Route::get('/complejos/crear', App\Livewire\Owner\Complexes\Form::class)->name('owner.complexes.create');
     Route::get('/complejos/{complex}/editar', App\Livewire\Owner\Complexes\Form::class)->name('owner.complexes.edit');
+
+    // Tournament management
+    Route::get('/torneos', App\Livewire\Owner\Tournaments\Index::class)->name('owner.tournaments.index');
+    Route::get('/torneos/crear', App\Livewire\Owner\Tournaments\Form::class)->name('owner.tournaments.create');
+    Route::get('/torneos/{tournament}/editar', App\Livewire\Owner\Tournaments\Form::class)->name('owner.tournaments.edit');
+    Route::get('/torneos/{tournament}/equipos', App\Livewire\Owner\Tournaments\Teams::class)->name('owner.tournaments.teams');
+    Route::get('/torneos/{tournament}/fixture', App\Livewire\Owner\Tournaments\Fixture::class)->name('owner.tournaments.fixture');
 });
 
 // Staff routes (superadmin + owner + staff) — reservas scoped por complejo
@@ -109,14 +116,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/torneos/{tournament}/inscribirse', App\Livewire\Tournaments\Register::class)->name('tournaments.register');
 });
 
-// Owner tournament management
-Route::middleware(['auth', 'role:superadmin,owner'])->prefix('owner/torneos')->name('owner.tournaments.')->group(function () {
-    Route::get('/', App\Livewire\Owner\Tournaments\Index::class)->name('index');
-    Route::get('/crear', App\Livewire\Owner\Tournaments\Form::class)->name('create');
-    Route::get('/{tournament}/editar', App\Livewire\Owner\Tournaments\Form::class)->name('edit');
-    Route::get('/{tournament}/equipos', App\Livewire\Owner\Tournaments\Teams::class)->name('teams');
-    Route::get('/{tournament}/fixture', App\Livewire\Owner\Tournaments\Fixture::class)->name('fixture');
-});
 
 // UC-06: Gestionar canchas (admin/owner only)
 Route::middleware(['auth', 'role:superadmin,owner'])->group(function () {

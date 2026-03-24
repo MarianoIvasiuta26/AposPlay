@@ -5,11 +5,11 @@
                 <a href="{{ route('owner.tournaments.index') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Mis Torneos</a>
                 <span class="text-gray-400">/</span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ $tournament && $tournament->exists ? 'Editar' : 'Crear' }}
+                    {{ $tournamentId ? 'Editar' : 'Crear' }}
                 </span>
             </div>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {{ $tournament && $tournament->exists ? 'Editar Torneo' : 'Crear Torneo' }}
+                {{ $tournamentId ? 'Editar Torneo' : 'Crear Torneo' }}
             </h2>
         </div>
     </div>

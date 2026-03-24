@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Owner\Tournaments;
 
-use App\Enums\TournamentFormat;
 use App\Enums\TournamentStatus;
 use App\Models\Court;
 use App\Models\Complex;
@@ -15,7 +14,7 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Form extends Component
 {
-    public ?Tournament $tournament = null;
+    public ?int $tournamentId = null;
 
     #[Rule('required|min:2|max:255')]
     public string $name = '';
@@ -62,10 +61,13 @@ class Form extends Component
     public string $errorMessage = '';
     public string $successMessage = '';
 
-    public function mount(?Tournament $tournament = null): void
+    public function mount(): void
     {
-        if ($tournament && $tournament->exists) {
-            $this->tournament = $tournament;
+        // Load tournament data when editing (route has {tournament} parameter)
+        $tournamentId = request()->route('tournament');
+        if ($tournamentId) {
+            $tournament = Tournament::findOrFail($tournamentId);
+            $this->tournamentId          = $tournament->id;
             $this->name                  = $tournament->name;
             $this->description           = $tournament->description ?? '';
             $this->sport_type            = $tournament->sport_type;
@@ -109,18 +111,15 @@ class Form extends Component
 
             $service = app(TournamentService::class);
 
-            if ($this->tournament && $this->tournament->exists) {
-                $this->tournament->update($data);
-                $tournament = $this->tournament->fresh();
+            if ($this->tournamentId) {
+                $tournament = Tournament::findOrFail($this->tournamentId);
+                $tournament->update($data);
             } else {
                 $tournament = $service->create($data, auth()->user());
             }
 
             if ($action === 'open') {
                 $service->openRegistration($tournament);
-                $this->successMessage = 'Torneo guardado y las inscripciones han sido abiertas.';
-            } else {
-                $this->successMessage = 'Torneo guardado como borrador.';
             }
 
             $this->redirect(route('owner.tournaments.index'));
@@ -133,21 +132,18 @@ class Form extends Component
     {
         $courts = collect();
 
-        // Load courts owned by this owner via complexes
         $user = auth()->user();
         if ($user->isSuperadmin()) {
-            $courts = Court::whereNull('deleted_at')->get(['id', 'name', 'type']);
+            $courts = Court::withoutTrashed()->get(['id', 'name', 'type']);
         } else {
             $complexIds = Complex::where('owner_id', $user->id)->pluck('id');
             if ($complexIds->isNotEmpty()) {
-                $courts = Court::whereIn('complex_id', $complexIds)->whereNull('deleted_at')->get(['id', 'name', 'type']);
+                $courts = Court::whereIn('complex_id', $complexIds)->withoutTrashed()->get(['id', 'name', 'type']);
             }
         }
 
-        $title = $this->tournament && $this->tournament->exists ? 'Editar Torneo' : 'Crear Torneo';
-
         return view('livewire.owner.tournaments.form', [
             'courts' => $courts,
-        ])->title($title);
+        ]);
     }
 }
