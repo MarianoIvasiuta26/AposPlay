@@ -3,7 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Enums\ReservationStatus;
+use App\Models\Complex;
 use App\Models\Court;
+use App\Models\CourtsXAdmin;
 use App\Models\Reservation;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
@@ -36,13 +38,38 @@ class OccupancyReport extends Component
         };
     }
 
+    private function getScopedCourtIds(): ?array
+    {
+        $user = auth()->user();
+
+        if ($user->isSuperadmin()) {
+            return null;
+        }
+
+        $complexIds = Complex::where('owner_id', $user->id)->pluck('id');
+        $courtIdsFromComplexes = Court::whereIn('complex_id', $complexIds)->pluck('id');
+        $courtIdsFromAdmin = CourtsXAdmin::where('user_id', $user->id)->pluck('court_id');
+
+        return $courtIdsFromComplexes->merge($courtIdsFromAdmin)->unique()->values()->all();
+    }
+
     public function render()
     {
-        $courts = Court::orderBy('name')->get();
+        $scopedCourtIds = $this->getScopedCourtIds();
+
+        $courtsQuery = Court::orderBy('name');
+        if ($scopedCourtIds !== null) {
+            $courtsQuery->whereIn('id', $scopedCourtIds);
+        }
+        $courts = $courtsQuery->get();
 
         $query = Reservation::whereBetween('reservation_date', [$this->dateFrom, $this->dateTo])
             ->where('status', '!=', ReservationStatus::CANCELLED->value)
             ->with('court');
+
+        if ($scopedCourtIds !== null) {
+            $query->whereIn('court_id', $scopedCourtIds);
+        }
 
         if ($this->courtFilter !== 'all') {
             $query->where('court_id', $this->courtFilter);

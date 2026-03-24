@@ -29,11 +29,11 @@
                         :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
                     </flux:navlist.item>
                 @endif
-                @auth
+                @if(auth()->user()?->isUser())
                     <flux:navlist.item icon="trophy" :href="route('tournaments.index')"
                         :current="request()->routeIs('tournaments.*')" wire:navigate>{{ __('Torneos') }}
                     </flux:navlist.item>
-                @endauth
+                @endif
             </flux:navlist.group>
 
             @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER, \App\Enums\UserRole::STAFF))

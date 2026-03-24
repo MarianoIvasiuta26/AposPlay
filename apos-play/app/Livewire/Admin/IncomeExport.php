@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Complex;
+use App\Models\Court;
+use App\Models\CourtsXAdmin;
 use App\Models\Reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -35,16 +38,37 @@ class IncomeExport extends Component
         return [$this->dateFrom, $this->dateTo];
     }
 
+    private function getScopedCourtIds(): ?array
+    {
+        $user = auth()->user();
+
+        if ($user->isSuperadmin()) {
+            return null;
+        }
+
+        $complexIds = Complex::where('owner_id', $user->id)->pluck('id');
+        $courtIdsFromComplexes = Court::whereIn('complex_id', $complexIds)->pluck('id');
+        $courtIdsFromAdmin = CourtsXAdmin::where('user_id', $user->id)->pluck('court_id');
+
+        return $courtIdsFromComplexes->merge($courtIdsFromAdmin)->unique()->values()->all();
+    }
+
     private function getReservations()
     {
         [$from, $to] = $this->getDateRange();
 
-        return Reservation::whereBetween('reservation_date', [$from, $to])
+        $query = Reservation::whereBetween('reservation_date', [$from, $to])
             ->where('amount_paid', '>', 0)
             ->with(['court', 'user'])
             ->orderBy('reservation_date')
-            ->orderBy('start_time')
-            ->get();
+            ->orderBy('start_time');
+
+        $scopedCourtIds = $this->getScopedCourtIds();
+        if ($scopedCourtIds !== null) {
+            $query->whereIn('court_id', $scopedCourtIds);
+        }
+
+        return $query->get();
     }
 
     private function getTipo(Reservation $r): string

@@ -17,6 +17,7 @@ use App\Models\Reservation;
 use App\Models\Tournament;
 use App\Models\TournamentMatch;
 use App\Models\TournamentTeam;
+use App\Models\TournamentPlayerStat;
 use App\Models\TournamentTeamMember;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -672,20 +673,28 @@ class DemoSeeder extends Seeder
                     continue;
                 }
 
-                TournamentMatch::firstOrCreate(
-                    [
-                        'tournament_id' => $tournament->id,
-                        'home_team_id'  => $homeTeam->id,
-                        'away_team_id'  => $awayTeam->id,
-                        'round'         => $md['round'],
-                    ],
-                    [
-                        'home_score'   => $md['home_score'],
-                        'away_score'   => $md['away_score'],
-                        'status'       => $md['status']->value,
-                        'scheduled_at' => $now->copy()->parse($td['starts_at'])->addDays(($md['round'] - 1) * 7),
-                    ]
-                );
+                [$match, $created] = [
+                    TournamentMatch::firstOrCreate(
+                        [
+                            'tournament_id' => $tournament->id,
+                            'home_team_id'  => $homeTeam->id,
+                            'away_team_id'  => $awayTeam->id,
+                            'round'         => $md['round'],
+                        ],
+                        [
+                            'home_score'   => $md['home_score'],
+                            'away_score'   => $md['away_score'],
+                            'status'       => $md['status']->value,
+                            'scheduled_at' => $now->copy()->parse($td['starts_at'])->addDays(($md['round'] - 1) * 7),
+                        ]
+                    ),
+                    true,
+                ];
+
+                // Crear estadísticas de jugadores para partidos completados
+                if ($md['status'] === TournamentMatchStatus::COMPLETED && $md['home_score'] !== null) {
+                    $this->createPlayerStats($tournament->id, $match, $homeTeam, $awayTeam, $md['home_score'], $md['away_score']);
+                }
             }
         }
 
@@ -719,5 +728,57 @@ class DemoSeeder extends Seeder
         $this->command->info('');
         $this->command->info('Para disparar GameReminder manualmente:');
         $this->command->info('  php artisan reminders:send');
+    }
+
+    /**
+     * Distribuye goles y asistencias entre los jugadores de ambos equipos.
+     */
+    private function createPlayerStats(int $tournamentId, TournamentMatch $match, TournamentTeam $homeTeam, TournamentTeam $awayTeam, int $homeScore, int $awayScore): void
+    {
+        $homeMembers = $homeTeam->members()->with('user')->get();
+        $awayMembers = $awayTeam->members()->with('user')->get();
+
+        $this->distributeGoals($tournamentId, $match, $homeTeam, $homeMembers, $homeScore);
+        $this->distributeGoals($tournamentId, $match, $awayTeam, $awayMembers, $awayScore);
+    }
+
+    private function distributeGoals(int $tournamentId, TournamentMatch $match, TournamentTeam $team, $members, int $goals): void
+    {
+        if ($members->isEmpty()) {
+            return;
+        }
+
+        $remaining = $goals;
+        $memberCount = $members->count();
+
+        foreach ($members as $idx => $member) {
+            // Distribuir goles: el primer jugador (capitán) anota más
+            $isLast = ($idx === $memberCount - 1);
+            $scored = $isLast ? $remaining : (int) floor($remaining / max(1, $memberCount - $idx));
+
+            // Asistencias = goles que anotaron otros jugadores del equipo
+            $assists = ($goals > 0 && $scored < $goals) ? min(1, $goals - $scored) : 0;
+
+            // Tarjetas ocasionales
+            $yellow = ($idx % 3 === 0) ? 1 : 0;
+            $red    = 0;
+
+            \App\Models\TournamentPlayerStat::firstOrCreate(
+                [
+                    'match_id' => $match->id,
+                    'user_id'  => $member->user_id,
+                    'team_id'  => $team->id,
+                ],
+                [
+                    'tournament_id' => $tournamentId,
+                    'goals'         => $scored,
+                    'assists'       => $assists,
+                    'yellow_cards'  => $yellow,
+                    'red_cards'     => $red,
+                ]
+            );
+
+            $remaining -= $scored;
+        }
     }
 }
