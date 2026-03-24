@@ -47,17 +47,21 @@
                             </div>
                             @php
                                 $statusColors = [
-                                    'pending' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-                                    'confirmed' => 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                                    'cancelled' => 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                                    'pending'         => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-600 dark:text-yellow-100',
+                                    'pending_payment' => 'bg-amber-100 text-amber-700 dark:bg-amber-600 dark:text-amber-100',
+                                    'confirmed'       => 'bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100',
+                                    'paid'            => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-700 dark:text-emerald-100',
+                                    'cancelled'       => 'bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100',
                                 ];
                                 $statusLabels = [
-                                    'pending' => 'Pendiente',
-                                    'pending_payment' => 'Pendiente de Pago',
-                                    'confirmed' => 'Confirmada',
-                                    'cancelled' => 'Cancelada',
+                                    'pending'         => 'Pendiente',
+                                    'pending_payment' => 'Pend. de Pago',
+                                    'confirmed'       => 'Confirmada',
+                                    'paid'            => 'Pagada',
+                                    'cancelled'       => 'Cancelada',
                                 ];
                                 $status = $reservation->status->value;
+                                $paymentStatus = $reservation->payment_status;
                             @endphp
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$status] ?? 'bg-gray-100 text-gray-800' }}">
@@ -79,6 +83,26 @@
                                 <flux:icon name="banknotes" class="w-4 h-4 mr-2" />
                                 <span>${{ number_format($reservation->total_price, 0, ',', '.') }}</span>
                             </div>
+
+                            @if($status === 'cancelled' && in_array($paymentStatus, ['refunded', 'partial_refunded']))
+                                @php
+                                    $refundedAmount = $paymentStatus === 'refunded'
+                                        ? $reservation->amount_paid
+                                        : ($reservation->amount_paid * 0.5);
+                                @endphp
+                                <div class="flex items-start gap-2 mt-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                                    <flux:icon name="arrow-uturn-left" class="w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                                    <div class="text-sm text-blue-800 dark:text-blue-300">
+                                        @if($paymentStatus === 'refunded')
+                                            <span class="font-semibold">Reembolso total:</span>
+                                            ${{ number_format($refundedAmount, 0, ',', '.') }} acreditados a tu medio de pago.
+                                        @else
+                                            <span class="font-semibold">Reembolso parcial (50%):</span>
+                                            ${{ number_format($refundedAmount, 0, ',', '.') }} acreditados a tu medio de pago.
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         @php
@@ -90,10 +114,53 @@
                         @if(in_array($status, ['pending', 'confirmed', 'pending_payment', 'paid']))
                             <div class="pt-4 border-t border-gray-100 dark:border-zinc-800 flex flex-wrap gap-2">
                                 @if(in_array($status, ['pending', 'pending_payment']))
-                                    <button wire:click="pay({{ $reservation->id }})"
-                                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer">
-                                        Pagar Reserva
-                                    </button>
+                                    <div
+                                        x-data="{
+                                            loading: false,
+                                            paid: false,
+                                            pollInterval: null,
+                                            openPayment() {
+                                                this.loading = true;
+                                                fetch('{{ route('mercadopago.preference-url', $reservation->id) }}')
+                                                    .then(r => r.json())
+                                                    .then(data => {
+                                                        this.loading = false;
+                                                        if (data.url) {
+                                                            window.open(data.url, '_blank');
+                                                            this.startPolling();
+                                                        } else {
+                                                            alert(data.error ?? 'Error al generar el pago.');
+                                                        }
+                                                    })
+                                                    .catch(() => { this.loading = false; alert('Error de conexión.'); });
+                                            },
+                                            startPolling() {
+                                                this.pollInterval = setInterval(() => {
+                                                    $wire.checkPaymentStatus({{ $reservation->id }}).then(() => {
+                                                        if (@js(session('success'))) {
+                                                            clearInterval(this.pollInterval);
+                                                            this.paid = true;
+                                                        }
+                                                    });
+                                                }, 6000);
+                                                setTimeout(() => clearInterval(this.pollInterval), 180000);
+                                            }
+                                        }"
+                                        class="flex flex-col gap-1 w-full"
+                                    >
+                                        <button
+                                            @click="openPayment()"
+                                            :disabled="loading"
+                                            class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer disabled:opacity-50">
+                                            <span x-show="!loading">Pagar Reserva</span>
+                                            <span x-show="loading">Generando pago...</span>
+                                        </button>
+                                        <button
+                                            wire:click="checkPaymentStatus({{ $reservation->id }})"
+                                            class="flex-1 inline-flex justify-center items-center px-3 py-1.5 bg-zinc-700 border border-zinc-600 rounded-md font-semibold text-xs text-zinc-300 uppercase tracking-widest shadow-sm hover:bg-zinc-600 transition ease-in-out duration-150 cursor-pointer">
+                                            Verificar pago
+                                        </button>
+                                    </div>
                                 @endif
 
                                 @if($canReschedule)

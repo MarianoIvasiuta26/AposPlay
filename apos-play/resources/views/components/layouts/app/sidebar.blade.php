@@ -29,6 +29,11 @@
                         :current="request()->routeIs('court-availability')" wire:navigate>{{ __('Canchas') }}
                     </flux:navlist.item>
                 @endif
+                @auth
+                    <flux:navlist.item icon="trophy" :href="route('tournaments.index')"
+                        :current="request()->routeIs('tournaments.*')" wire:navigate>{{ __('Torneos') }}
+                    </flux:navlist.item>
+                @endauth
             </flux:navlist.group>
 
             @if(auth()->user()?->hasRole(\App\Enums\UserRole::SUPERADMIN, \App\Enums\UserRole::OWNER, \App\Enums\UserRole::STAFF))
@@ -60,6 +65,10 @@
                             :current="request()->routeIs('admin.court-blocks*')" wire:navigate>
                             {{ __('Bloqueos de Horario') }}
                         </flux:navlist.item>
+                        <flux:navlist.item icon="document-magnifying-glass" :href="route('admin.audit-log')"
+                            :current="request()->routeIs('admin.audit-log')" wire:navigate>
+                            {{ __('Auditoría') }}
+                        </flux:navlist.item>
                     @endif
                 </flux:navlist.group>
             @endif
@@ -90,6 +99,10 @@
                     <flux:navlist.item icon="user-group" :href="route('owner.staff')"
                         :current="request()->routeIs('owner.staff*')" wire:navigate>
                         {{ __('Staff') }}
+                    </flux:navlist.item>
+                    <flux:navlist.item icon="trophy" :href="route('owner.tournaments.index')"
+                        :current="request()->routeIs('owner.tournaments.*')" wire:navigate>
+                        {{ __('Mis Torneos') }}
                     </flux:navlist.item>
                 </flux:navlist.group>
             @endif
@@ -135,7 +148,7 @@
                 <flux:menu.separator />
 
                 <flux:menu.radio.group>
-                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}
+                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Configuración') }}
                     </flux:menu.item>
                 </flux:menu.radio.group>
 
@@ -144,7 +157,7 @@
                 <form method="POST" action="{{ route('logout') }}" class="w-full">
                     @csrf
                     <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
-                        {{ __('Log Out') }}
+                        {{ __('Cerrar sesión') }}
                     </flux:menu.item>
                 </form>
             </flux:menu>
@@ -182,7 +195,7 @@
                 <flux:menu.separator />
 
                 <flux:menu.radio.group>
-                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}
+                    <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Configuración') }}
                     </flux:menu.item>
                 </flux:menu.radio.group>
 
@@ -191,7 +204,7 @@
                 <form method="POST" action="{{ route('logout') }}" class="w-full">
                     @csrf
                     <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
-                        {{ __('Log Out') }}
+                        {{ __('Cerrar sesión') }}
                     </flux:menu.item>
                 </form>
             </flux:menu>

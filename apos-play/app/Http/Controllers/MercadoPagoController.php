@@ -6,6 +6,7 @@ use App\Enums\ReservationStatus;
 use App\Models\Reservation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use MercadoPago\Client\Payment\PaymentClient;
 use MercadoPago\Client\Preference\PreferenceClient;
 use MercadoPago\MercadoPagoConfig;
 use MercadoPago\Exceptions\MPApiException;
@@ -128,5 +129,102 @@ class MercadoPagoController extends Controller
     public function pending(Request $request)
     {
         return redirect()->route('my-reservations')->with('warning', 'El pago está pendiente de confirmación.');
+    }
+
+    /**
+     * Returns the MP checkout URL as JSON (used by Livewire to open in new tab).
+     */
+    public function preferenceUrl(Reservation $reservation)
+    {
+        if ($reservation->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($reservation->status === ReservationStatus::PAID) {
+            return response()->json(['error' => 'Esta reserva ya está pagada.'], 422);
+        }
+
+        $client = new PreferenceClient();
+
+        try {
+            $preferenceData = [
+                "items" => [[
+                    "title"      => "Reserva de Cancha - " . $reservation->court->name,
+                    "quantity"   => 1,
+                    "unit_price" => (float) $reservation->total_price,
+                    "currency_id" => "ARS",
+                ]],
+                "payer" => [
+                    "email" => config('services.mercadopago.test_user_email') ?? $reservation->user->email,
+                ],
+                "external_reference" => (string) $reservation->id,
+                "back_urls" => [
+                    "success" => route('mercadopago.success'),
+                    "failure" => route('mercadopago.failure'),
+                    "pending" => route('mercadopago.pending'),
+                ],
+            ];
+
+            $preference = $client->create($preferenceData);
+            Log::info("Preference URL created for Reservation {$reservation->id}: {$preference->init_point}");
+
+            return response()->json(['url' => $preference->init_point]);
+
+        } catch (MPApiException $e) {
+            $content = $e->getApiResponse()?->getContent() ?? 'No response';
+            Log::error('MercadoPago API Error (preferenceUrl): ' . json_encode($content));
+            return response()->json(['error' => 'Error de Mercado Pago: ' . $e->getMessage()], 500);
+        } catch (\Exception $e) {
+            Log::error('MercadoPago Error (preferenceUrl): ' . $e->getMessage());
+            return response()->json(['error' => 'Error al iniciar el pago.'], 500);
+        }
+    }
+
+    /**
+     * Webhook handler: MercadoPago notifies us of payment updates.
+     */
+    public function webhook(Request $request)
+    {
+        $type   = $request->input('type') ?? $request->input('topic');
+        $dataId = $request->input('data.id') ?? $request->query('id');
+
+        Log::info("MP Webhook received: type={$type}, id={$dataId}");
+
+        if ($type !== 'payment' || empty($dataId)) {
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        try {
+            $paymentClient = new PaymentClient();
+            $payment = $paymentClient->get((int) $dataId);
+
+            $status            = $payment->status;
+            $externalReference = $payment->external_reference;
+            $paymentId         = $payment->id;
+
+            Log::info("MP Webhook payment: id={$paymentId}, status={$status}, reference={$externalReference}");
+
+            $reservation = Reservation::find($externalReference);
+            if (! $reservation) {
+                Log::warning("MP Webhook: Reservation {$externalReference} not found.");
+                return response()->json(['status' => 'not_found'], 200);
+            }
+
+            if ($status === 'approved' && $reservation->status !== ReservationStatus::PAID) {
+                $reservation->update([
+                    'status'       => ReservationStatus::PAID,
+                    'payment_status' => 'paid',
+                    'payment_id'   => $paymentId,
+                    'amount_paid'  => $reservation->total_price,
+                ]);
+                Log::info("MP Webhook: Reservation {$externalReference} marked as PAID.");
+            }
+
+        } catch (\Exception $e) {
+            Log::error("MP Webhook error: " . $e->getMessage());
+            return response()->json(['status' => 'error'], 500);
+        }
+
+        return response()->json(['status' => 'ok'], 200);
     }
 }

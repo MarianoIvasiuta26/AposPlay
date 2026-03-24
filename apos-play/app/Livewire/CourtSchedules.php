@@ -18,10 +18,23 @@ class CourtSchedules extends Component
 
     protected $rules = [
         'schedules.*.active'       => 'boolean',
-        'schedules.*.start_time_1' => 'nullable|required_if:schedules.*.active,true|date_format:H:i',
-        'schedules.*.end_time_1'   => 'nullable|required_if:schedules.*.active,true|date_format:H:i|after:schedules.*.start_time_1',
-        'schedules.*.start_time_2' => 'nullable|date_format:H:i',
-        'schedules.*.end_time_2'   => 'nullable|required_with:schedules.*.start_time_2|date_format:H:i|after:schedules.*.start_time_2',
+        'schedules.*.start_time_1' => 'nullable|date_format:H:i|required_with:schedules.*.end_time_1',
+        'schedules.*.end_time_1'   => 'nullable|date_format:H:i|required_with:schedules.*.start_time_1|after:schedules.*.start_time_1',
+        'schedules.*.start_time_2' => 'nullable|date_format:H:i|required_with:schedules.*.end_time_2',
+        'schedules.*.end_time_2'   => 'nullable|date_format:H:i|required_with:schedules.*.start_time_2|after:schedules.*.start_time_2',
+    ];
+
+    protected $messages = [
+        'schedules.*.start_time_1.date_format'   => 'El formato de hora de apertura (turno mañana) debe ser HH:MM.',
+        'schedules.*.start_time_1.required_with' => 'Debe ingresar la hora de apertura del turno mañana.',
+        'schedules.*.end_time_1.date_format'     => 'El formato de hora de cierre (turno mañana) debe ser HH:MM.',
+        'schedules.*.end_time_1.required_with'   => 'Debe ingresar la hora de cierre del turno mañana.',
+        'schedules.*.end_time_1.after'           => 'El cierre del turno mañana debe ser posterior a la apertura.',
+        'schedules.*.start_time_2.date_format'   => 'El formato de hora de apertura (turno tarde) debe ser HH:MM.',
+        'schedules.*.start_time_2.required_with' => 'Debe ingresar la hora de apertura del turno tarde.',
+        'schedules.*.end_time_2.date_format'     => 'El formato de hora de cierre (turno tarde) debe ser HH:MM.',
+        'schedules.*.end_time_2.required_with'   => 'Debe ingresar la hora de cierre del turno tarde.',
+        'schedules.*.end_time_2.after'           => 'El cierre del turno tarde debe ser posterior a la apertura.',
     ];
 
     public function mount(Court $court)
@@ -67,23 +80,38 @@ class CourtSchedules extends Component
     public function save()
     {
         Log::info('Saving schedules (Pivot Multi-shift)', ['court_id' => $this->court->id, 'data' => $this->schedules]);
-        
+
         try {
             $this->validate();
+
+            // Verificar que cada día activo tenga al menos un turno completo
+            $hasError = false;
+            foreach ($this->schedules as $dayId => $schedule) {
+                if (!empty($schedule['active']) && $schedule['active'] === true) {
+                    $hasShift1 = !empty($schedule['start_time_1']) && !empty($schedule['end_time_1']);
+                    $hasShift2 = !empty($schedule['start_time_2']) && !empty($schedule['end_time_2']);
+                    if (!$hasShift1 && !$hasShift2) {
+                        $this->addError("schedules.{$dayId}.start_time_1", 'Debe completar al menos un turno para este día.');
+                        $hasError = true;
+                    }
+                }
+            }
+            if ($hasError) return;
 
             DB::transaction(function () {
                 $syncData = [];
 
                 foreach ($this->schedules as $day_id => $schedule) {
-                    // Only sync if active is true
                     if (!empty($schedule['active']) && $schedule['active'] === true) {
-                         // Essential checks for first shift
-                        if (!empty($schedule['start_time_1']) && !empty($schedule['end_time_1'])) {
+                        $hasShift1 = !empty($schedule['start_time_1']) && !empty($schedule['end_time_1']);
+                        $hasShift2 = !empty($schedule['start_time_2']) && !empty($schedule['end_time_2']);
+
+                        if ($hasShift1 || $hasShift2) {
                             $syncData[$day_id] = [
-                                'start_time_1' => $schedule['start_time_1'],
-                                'end_time_1'   => $schedule['end_time_1'],
-                                'start_time_2' => !empty($schedule['start_time_2']) ? $schedule['start_time_2'] : null,
-                                'end_time_2'   => !empty($schedule['end_time_2']) ? $schedule['end_time_2'] : null,
+                                'start_time_1' => $hasShift1 ? $schedule['start_time_1'] : null,
+                                'end_time_1'   => $hasShift1 ? $schedule['end_time_1'] : null,
+                                'start_time_2' => $hasShift2 ? $schedule['start_time_2'] : null,
+                                'end_time_2'   => $hasShift2 ? $schedule['end_time_2'] : null,
                             ];
                         }
                     }

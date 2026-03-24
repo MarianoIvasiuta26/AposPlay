@@ -6,9 +6,13 @@ use App\Enums\ReservationStatus;
 use App\Models\Reservation;
 use App\Services\RefundService;
 use App\Services\ReservationService;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 use Carbon\Carbon;
+use MercadoPago\Client\Payment\PaymentClient;
+use MercadoPago\MercadoPagoConfig;
+use MercadoPago\Net\MPSearchRequest;
 
 #[Layout('components.layouts.app')]
 class MyReservations extends Component
@@ -84,6 +88,47 @@ class MyReservations extends Component
         return redirect()->route('mercadopago.create', ['reservation' => $reservation->id]);
     }
 
+    public function checkPaymentStatus(int $reservationId): void
+    {
+        $reservation = Reservation::where('user_id', auth()->id())
+            ->where('id', $reservationId)
+            ->firstOrFail();
+
+        if ($reservation->status === ReservationStatus::PAID) {
+            session()->flash('success', 'El pago ya fue registrado correctamente.');
+            return;
+        }
+
+        try {
+            MercadoPagoConfig::setAccessToken(config('services.mercadopago.access_token'));
+            $client = new PaymentClient();
+            $searchRequest = new MPSearchRequest(5, 0, [
+                'external_reference' => (string) $reservation->id,
+            ]);
+            $result = $client->search($searchRequest);
+            $payments = $result->results ?? [];
+
+            $approved = collect($payments)->first(fn($p) => $p->status === 'approved');
+
+            if ($approved) {
+                $reservation->update([
+                    'status'         => ReservationStatus::PAID,
+                    'payment_status' => 'paid',
+                    'payment_id'     => $approved->id,
+                    'amount_paid'    => $reservation->total_price,
+                ]);
+                session()->flash('success', '¡Pago verificado! Tu reserva está confirmada.');
+                Log::info("checkPaymentStatus: Reservation {$reservationId} marked PAID via MP search.");
+            } else {
+                session()->flash('error', 'No se encontró un pago aprobado aún. Intentá de nuevo en unos segundos.');
+                Log::info("checkPaymentStatus: No approved payment found for reservation {$reservationId}.");
+            }
+        } catch (\Exception $e) {
+            Log::error("checkPaymentStatus error: " . $e->getMessage());
+            session()->flash('error', 'Error al verificar el pago. Intentá de nuevo.');
+        }
+    }
+
     public function openRescheduleModal(int $reservationId)
     {
         $reservation = Reservation::where('user_id', auth()->id())
@@ -101,8 +146,8 @@ class MyReservations extends Component
         $this->newDuration = $reservation->duration_hours ?? 1;
         $this->showRescheduleModal = true;
 
-        // Build available dates (next 7 days from tomorrow)
-        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
+        // Build available dates (next 7 days from tomorrow, Argentine timezone)
+        $tomorrow = Carbon::now('America/Argentina/Buenos_Aires')->addDay()->startOfDay();
         $this->availableDates = [];
         for ($i = 0; $i < 7; $i++) {
             $date = $tomorrow->copy()->addDays($i);
@@ -112,7 +157,16 @@ class MyReservations extends Component
             ];
         }
 
-        $this->newDate = $this->availableDates[0]['value'] ?? '';
+        // Pre-seleccionar la fecha actual de la reserva si está en el rango, si no la primera disponible
+        $reservationDate = $reservation->reservation_date instanceof Carbon
+            ? $reservation->reservation_date->toDateString()
+            : (string) $reservation->reservation_date;
+
+        $dateValues = array_column($this->availableDates, 'value');
+        $this->newDate = in_array($reservationDate, $dateValues)
+            ? $reservationDate
+            : ($this->availableDates[0]['value'] ?? '');
+
         $this->loadAvailableSlots();
     }
 

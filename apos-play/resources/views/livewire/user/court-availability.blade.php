@@ -87,7 +87,7 @@
                                                     </button>
                                                 @else
                                                     <button
-                                                        wire:click="openReservationModal({{ $court->id }}, {{ $hourData['schedule_id'] }}, '{{ $selectedDate }}', '{{ $hourData['hour'] }}')"
+                                                        wire:click="openReservationModal({{ $court->id }}, {{ $hourData['schedule_id'] ?? 'null' }}, '{{ $selectedDate }}', '{{ $hourData['hour'] }}')"
                                                         class="
                                                                                                                                     bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 dark:text-blue-300 dark:border-blue-800
                                                                                                                                     font-medium py-2 px-1 rounded-lg text-sm transition-colors border flex flex-col items-center justify-center cursor-pointer
@@ -293,6 +293,14 @@
                             </div>
                         </div>
                     </div>
+                    @if($modalError)
+                        <div class="mx-4 mb-0 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
+                            <svg class="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            </svg>
+                            <p class="text-sm text-red-700 dark:text-red-300">{{ $modalError }}</p>
+                        </div>
+                    @endif
                     <div class="bg-gray-50 dark:bg-neutral-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                         <button type="button" wire:click="confirmReservation"
                             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm cursor-pointer">

@@ -47,7 +47,7 @@
                         <div class="col-span-2">Día</div>
                         <div class="col-span-1 text-center">Estado</div>
                         <div class="col-span-9 pl-2 grid grid-cols-2 gap-4 text-center">
-                            <div>Turno Mañana</div>
+                            <div>Turno Mañana (Opcional)</div>
                             <div>Turno Tarde (Opcional)</div>
                         </div>
                     </div>

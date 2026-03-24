@@ -97,11 +97,25 @@ class Reservations extends Component
             return null;
         }
 
-        $complexIds = $user->isStaff()
-            ? $user->complexesStaff()->pluck('complexes.id')
-            : $user->complexesOwned()->pluck('id');
+        if ($user->isStaff()) {
+            // Canchas via complejo asignado
+            $complexes  = $user->complexesStaff()->with('owner')->get();
+            $complexIds = $complexes->pluck('id');
+            $viaComplex = Court::whereIn('complex_id', $complexIds)->pluck('id');
 
-        return Court::whereIn('complex_id', $complexIds)->pluck('id');
+            // Canchas directas de los owners de esos complejos
+            $ownerIds  = $complexes->pluck('owner_id')->unique();
+            $viaDirect = \App\Models\CourtsXAdmin::whereIn('user_id', $ownerIds)->pluck('court_id');
+
+            return $viaComplex->merge($viaDirect)->unique()->values();
+        }
+
+        // Owner: canchas via complejo + canchas asociadas directamente via courts_x_admins
+        $complexIds = $user->complexesOwned()->pluck('id');
+        $viaComplex = Court::whereIn('complex_id', $complexIds)->pluck('id');
+        $viaDirect  = \App\Models\CourtsXAdmin::where('user_id', $user->id)->pluck('court_id');
+
+        return $viaComplex->merge($viaDirect)->unique()->values();
     }
 
     public function render()

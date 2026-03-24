@@ -56,12 +56,12 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                         @switch($reservation->status->value)
-                                            @case('paid') bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 @break
-                                            @case('confirmed') bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 @break
-                                            @case('pending') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 @break
-                                            @case('pending_payment') bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 @break
-                                            @case('cancelled') bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 @break
-                                            @default bg-gray-100 text-gray-800 dark:bg-zinc-700 dark:text-gray-300
+                                            @case('paid') bg-emerald-100 text-emerald-700 dark:bg-emerald-700 dark:text-emerald-100 @break
+                                            @case('confirmed') bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-100 @break
+                                            @case('pending') bg-yellow-100 text-yellow-700 dark:bg-yellow-600 dark:text-yellow-100 @break
+                                            @case('pending_payment') bg-amber-100 text-amber-700 dark:bg-amber-600 dark:text-amber-100 @break
+                                            @case('cancelled') bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100 @break
+                                            @default bg-zinc-100 text-zinc-700 dark:bg-zinc-600 dark:text-zinc-100
                                         @endswitch
                                     ">
                                         {{ ucfirst($reservation->status->value) }}

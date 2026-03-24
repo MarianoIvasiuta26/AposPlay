@@ -28,6 +28,7 @@ class CourtAvailability extends Component
     public $reservationCourtName;
     public $reservationDuration = 1;
     public $reservationPrice;
+    public string $modalError = '';
 
     // Cupón
     public string $couponCode = '';
@@ -41,15 +42,14 @@ class CourtAvailability extends Component
     public function mount()
     {
         $this->initializeAvailableDates();
-        $this->selectedDate = Carbon::tomorrow()
-            ->setTimezone('America/Argentina/Buenos_Aires')
-            ->toDateString();
+        $this->selectedDate = Carbon::now('America/Argentina/Buenos_Aires')
+            ->addDay()->startOfDay()->toDateString();
         $this->loadAvailability();
     }
 
     private function initializeAvailableDates()
     {
-        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
+        $tomorrow = Carbon::now('America/Argentina/Buenos_Aires')->addDay()->startOfDay();
 
         for ($i = 0; $i < 7; $i++) {
             $date = $tomorrow->copy()->addDays($i);
@@ -86,8 +86,8 @@ class CourtAvailability extends Component
 
     public function resetFilters()
     {
-        $this->selectedDate = Carbon::tomorrow()
-            ->setTimezone('America/Argentina/Buenos_Aires')
+        $this->selectedDate = Carbon::now('America/Argentina/Buenos_Aires')
+            ->addDay()->startOfDay()
             ->toDateString();
         $this->courtType = 'all';
     }
@@ -109,6 +109,7 @@ class CourtAvailability extends Component
 
         $this->userPointsBalance = app(LoyaltyService::class)->getBalance(auth()->user());
         $this->usePoints = false;
+        $this->modalError = '';
 
         $this->showReservationModal = true;
     }
@@ -116,6 +117,7 @@ class CourtAvailability extends Component
     public function closeReservationModal()
     {
         $this->showReservationModal = false;
+        $this->modalError = '';
         $this->reset([
             'reservationCourtId', 'reservationScheduleId', 'reservationDate',
             'reservationTime', 'reservationCourtName', 'reservationPrice', 'reservationDuration',
@@ -194,26 +196,69 @@ class CourtAvailability extends Component
         ]);
 
         try {
-            $schedule = DB::table('schedules')
-                ->where('id', $this->reservationScheduleId)
-                ->first();
+            $startTime = Carbon::parse($this->reservationTime);
+            $endTime   = $startTime->copy()->addHours((int) $this->reservationDuration);
 
-            if (!$schedule) {
-                session()->flash('error', 'Horario no válido.');
-                $this->closeReservationModal();
-                return;
-            }
+            // Sistema viejo: validar contra tabla schedules
+            if (!is_null($this->reservationScheduleId)) {
+                $schedule = DB::table('schedules')
+                    ->where('id', $this->reservationScheduleId)
+                    ->first();
 
-            $startTime      = Carbon::parse($this->reservationTime);
-            $endTime        = $startTime->copy()->addHours((int) $this->reservationDuration);
-            $scheduleEndTime = Carbon::parse($schedule->end_time);
+                if (!$schedule) {
+                    session()->flash('error', 'Horario no válido.');
+                    $this->closeReservationModal();
+                    return;
+                }
 
-            if (
-                $scheduleEndTime->format('H:i') !== '00:00' &&
-                $endTime->format('H:i') > $scheduleEndTime->format('H:i')
-            ) {
-                session()->flash('error', 'La duración seleccionada excede el horario de cierre de la cancha.');
-                return;
+                $scheduleEndTime = Carbon::parse($schedule->end_time);
+
+                if (
+                    $scheduleEndTime->format('H:i') !== '00:00' &&
+                    $endTime->format('H:i') > $scheduleEndTime->format('H:i')
+                ) {
+                    $this->modalError = 'La duración seleccionada excede el horario de cierre de la cancha (' . $scheduleEndTime->format('H:i') . ').';
+                    return;
+                }
+            } else {
+                // Sistema nuevo: validar contra court_schedules
+                $dayOfWeek = Carbon::parse($this->reservationDate)->dayOfWeek;
+                $dayNameMap = [0 => 'Domingo', 1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'];
+                $dayName = $dayNameMap[$dayOfWeek] ?? null;
+                $dia = $dayName ? DB::table('dias')->where('nombre', $dayName)->first() : null;
+
+                if ($dia) {
+                    $cs = DB::table('court_schedules')
+                        ->where('court_id', $this->reservationCourtId)
+                        ->where('day_id', $dia->id)
+                        ->first();
+
+                    if ($cs) {
+                        // Encontrar el turno al que pertenece el slot reservado y validar cierre
+                        $shiftEnds = [];
+                        if ($cs->start_time_1 && $cs->end_time_1) {
+                            $shiftEnds[] = Carbon::parse($cs->end_time_1);
+                        }
+                        if ($cs->start_time_2 && $cs->end_time_2) {
+                            $shiftEnds[] = Carbon::parse($cs->end_time_2);
+                        }
+
+                        // El endTime de la reserva no debe superar ninguno de los cierres válidos para ese slot
+                        $slotStart = Carbon::parse($this->reservationTime);
+                        $validShiftEnd = null;
+                        foreach ($shiftEnds as $shiftEnd) {
+                            if ($slotStart->lt($shiftEnd)) {
+                                $validShiftEnd = $shiftEnd;
+                                break;
+                            }
+                        }
+
+                        if ($validShiftEnd && $endTime->gt($validShiftEnd)) {
+                            $this->modalError = 'La duración seleccionada excede el horario de cierre de la cancha (' . $validShiftEnd->format('H:i') . ').';
+                            return;
+                        }
+                    }
+                }
             }
 
             // Validar disponibilidad hora por hora en la fecha exacta
@@ -265,7 +310,7 @@ class CourtAvailability extends Component
             $reservation = \App\Models\Reservation::create([
                 'user_id'         => auth()->id(),
                 'court_id'        => $this->reservationCourtId,
-                'schedule_id'     => $this->reservationScheduleId,
+                'schedule_id'     => $this->reservationScheduleId ?: null,
                 'reservation_date' => $this->reservationDate,
                 'start_time'      => $this->reservationTime,
                 'duration_hours'  => $this->reservationDuration,
@@ -301,6 +346,7 @@ class CourtAvailability extends Component
 
     // -------------------------------------------------------------------------
     // Carga de disponibilidad (fecha a fecha, sin abstracciones de día-de-semana)
+    // Soporta sistema viejo (schedules + schedules_x_courts) y nuevo (court_schedules + dias)
     // -------------------------------------------------------------------------
 
     public function loadAvailability()
@@ -313,18 +359,29 @@ class CourtAvailability extends Component
 
         $this->hoursXCourts = [];
 
-        $tomorrow = Carbon::tomorrow()->setTimezone('America/Argentina/Buenos_Aires');
+        // Mapa Carbon dayOfWeek → nombre en tabla dias
+        $dayNameMap = [
+            0 => 'Domingo', 1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles',
+            4 => 'Jueves',  5 => 'Viernes', 6 => 'Sábado',
+        ];
+        $dias = DB::table('dias')->get()->keyBy('nombre');
+
+        $now      = Carbon::now('America/Argentina/Buenos_Aires');
+        $tomorrow = $now->copy()->addDay()->startOfDay();
 
         foreach ($this->courts as $court) {
             $this->hoursXCourts[$court->id] = [];
 
             for ($dayOffset = 0; $dayOffset < 7; $dayOffset++) {
-                $date       = $tomorrow->copy()->addDays($dayOffset);
-                $dateStr    = $date->toDateString();
-                $dayOfWeek  = $date->dayOfWeek;
+                $date      = $tomorrow->copy()->addDays($dayOffset);
+                $dateStr   = $date->toDateString();
+                $dayOfWeek = $date->dayOfWeek;
 
-                // Horarios del día (morning + afternoon)
-                $schedules = DB::table('schedules')
+                $hours     = [];
+                $seenHours = [];
+
+                // ── Sistema viejo ──────────────────────────────────────────
+                $oldSchedules = DB::table('schedules')
                     ->join('schedules_x_courts', 'schedules.id', '=', 'schedules_x_courts.schedule_id')
                     ->where('schedules_x_courts.court_id', $court->id)
                     ->where('schedules.day_of_week', $dayOfWeek)
@@ -333,53 +390,105 @@ class CourtAvailability extends Component
                     ->select('schedules.*')
                     ->get();
 
-                if ($schedules->isEmpty()) {
-                    continue;
-                }
+                if ($oldSchedules->isNotEmpty()) {
+                    $reservations = $this->fetchReservationsForDate($court->id, $dateStr);
+                    $blockService = app(CourtBlockService::class);
 
-                // Reservas confirmadas/pagadas para esta cancha en esta fecha
-                $reservations = $this->fetchReservationsForDate($court->id, $dateStr);
+                    foreach ($oldSchedules as $schedule) {
+                        $current = Carbon::parse($schedule->start_time);
+                        $end     = Carbon::parse($schedule->end_time);
 
-                $hours    = [];
-                $seenHours = [];
+                        while ($current < $end) {
+                            $hourStr = $current->format('H:i');
 
-                foreach ($schedules as $schedule) {
-                    $current = Carbon::parse($schedule->start_time);
-                    $end     = Carbon::parse($schedule->end_time);
-
-                    while ($current < $end) {
-                        $hourStr = $current->format('H:i');
-
-                        if (!isset($seenHours[$hourStr])) {
-                            $seenHours[$hourStr] = true;
-
-                            $blockService = app(CourtBlockService::class);
-                            $isBlocked = $blockService->isSlotBlocked($court->id, $dateStr, $hourStr);
-
-                            if ($isBlocked) {
-                                $status = 'blocked';
-                            } elseif ($this->isSlotTaken($hourStr, $reservations)) {
-                                $status = 'reserved';
-                            } else {
-                                $status = 'available';
+                            // Omitir slots ya pasados
+                            $slotDT = Carbon::parse($dateStr . ' ' . $hourStr, 'America/Argentina/Buenos_Aires');
+                            if ($slotDT->lte($now)) {
+                                $current->addHour();
+                                continue;
                             }
 
-                            $hours[] = [
-                                'hour'        => $hourStr,
-                                'date'        => $dateStr,
-                                'day_of_week' => $dayOfWeek,
-                                'turn'        => $schedule->turn,
-                                'schedule_id' => $schedule->id,
-                                'status'      => $status,
-                            ];
-                        }
+                            if (!isset($seenHours[$hourStr])) {
+                                $seenHours[$hourStr] = true;
+                                $isBlocked = $blockService->isSlotBlocked($court->id, $dateStr, $hourStr);
 
-                        $current->addHour();
+                                $hours[] = [
+                                    'hour'        => $hourStr,
+                                    'date'        => $dateStr,
+                                    'day_of_week' => $dayOfWeek,
+                                    'turn'        => $schedule->turn,
+                                    'schedule_id' => $schedule->id,
+                                    'status'      => $isBlocked ? 'blocked'
+                                        : ($this->isSlotTaken($hourStr, $reservations) ? 'reserved' : 'available'),
+                                ];
+                            }
+
+                            $current->addHour();
+                        }
+                    }
+                }
+
+                // ── Sistema nuevo (fallback si no hay horarios en el viejo) ─
+                if (empty($hours)) {
+                    $dayName = $dayNameMap[$dayOfWeek] ?? null;
+
+                    if ($dayName && isset($dias[$dayName])) {
+                        $diaId = $dias[$dayName]->id;
+
+                        $courtSchedule = DB::table('court_schedules')
+                            ->where('court_id', $court->id)
+                            ->where('day_id', $diaId)
+                            ->first();
+
+                        if ($courtSchedule) {
+                            $reservations = $this->fetchReservationsForDate($court->id, $dateStr);
+                            $blockService = app(CourtBlockService::class);
+
+                            $shifts = [];
+                            if ($courtSchedule->start_time_1 && $courtSchedule->end_time_1) {
+                                $shifts[] = ['start' => $courtSchedule->start_time_1, 'end' => $courtSchedule->end_time_1, 'turn' => 'morning'];
+                            }
+                            if ($courtSchedule->start_time_2 && $courtSchedule->end_time_2) {
+                                $shifts[] = ['start' => $courtSchedule->start_time_2, 'end' => $courtSchedule->end_time_2, 'turn' => 'afternoon'];
+                            }
+
+                            foreach ($shifts as $shift) {
+                                $current = Carbon::parse($shift['start']);
+                                $end     = Carbon::parse($shift['end']);
+
+                                while ($current < $end) {
+                                    $hourStr = $current->format('H:i');
+
+                                    // Omitir slots ya pasados
+                                    $slotDT = Carbon::parse($dateStr . ' ' . $hourStr, 'America/Argentina/Buenos_Aires');
+                                    if ($slotDT->lte($now)) {
+                                        $current->addHour();
+                                        continue;
+                                    }
+
+                                    if (!isset($seenHours[$hourStr])) {
+                                        $seenHours[$hourStr] = true;
+                                        $isBlocked = $blockService->isSlotBlocked($court->id, $dateStr, $hourStr);
+
+                                        $hours[] = [
+                                            'hour'        => $hourStr,
+                                            'date'        => $dateStr,
+                                            'day_of_week' => $dayOfWeek,
+                                            'turn'        => $shift['turn'],
+                                            'schedule_id' => null, // sistema nuevo: sin schedule viejo
+                                            'status'      => $isBlocked ? 'blocked'
+                                                : ($this->isSlotTaken($hourStr, $reservations) ? 'reserved' : 'available'),
+                                        ];
+                                    }
+
+                                    $current->addHour();
+                                }
+                            }
+                        }
                     }
                 }
 
                 if (!empty($hours)) {
-                    // Ordenar por hora
                     usort($hours, fn($a, $b) => $a['hour'] <=> $b['hour']);
 
                     $this->hoursXCourts[$court->id][$dateStr] = [

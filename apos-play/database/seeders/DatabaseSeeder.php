@@ -15,15 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             UserSeeder::class,
-            CourtAddressSeeder::class,
             DiasSeeder::class,
-            CourtSeeder::class,
-            ComplexSeeder::class,
-            ScheduleSeeder::class,
-            ReservationSeeder::class,
-            LoyaltyPointSeeder::class,
-            PromotionSeeder::class,
-            CourtBlockSeeder::class,
         ]);
     }
 }

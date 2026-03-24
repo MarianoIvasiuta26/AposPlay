@@ -95,8 +95,10 @@ class ReservationService
     public function getAvailableSlotsForDate(int $courtId, string $date): array
     {
         $dayOfWeek = Carbon::parse($date)->dayOfWeek;
+        $now       = Carbon::now('America/Argentina/Buenos_Aires');
 
-        $schedules = DB::table('schedules')
+        // Sistema viejo
+        $oldSchedules = DB::table('schedules')
             ->join('schedules_x_courts', 'schedules.id', '=', 'schedules_x_courts.schedule_id')
             ->where('schedules_x_courts.court_id', $courtId)
             ->where('schedules.day_of_week', $dayOfWeek)
@@ -104,6 +106,25 @@ class ReservationService
             ->whereNull('schedules.deleted_at')
             ->select('schedules.*')
             ->get();
+
+        // Sistema nuevo (fallback)
+        $newShifts = collect();
+        if ($oldSchedules->isEmpty()) {
+            $dayNameMap = [0 => 'Domingo', 1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'];
+            $dayName = $dayNameMap[$dayOfWeek] ?? null;
+            $dia = $dayName ? DB::table('dias')->where('nombre', $dayName)->first() : null;
+            if ($dia) {
+                $cs = DB::table('court_schedules')->where('court_id', $courtId)->where('day_id', $dia->id)->first();
+                if ($cs) {
+                    if ($cs->start_time_1 && $cs->end_time_1) {
+                        $newShifts->push(['start' => $cs->start_time_1, 'end' => $cs->end_time_1]);
+                    }
+                    if ($cs->start_time_2 && $cs->end_time_2) {
+                        $newShifts->push(['start' => $cs->start_time_2, 'end' => $cs->end_time_2]);
+                    }
+                }
+            }
+        }
 
         $reservations = DB::table('reservations')
             ->where('court_id', $courtId)
@@ -116,12 +137,23 @@ class ReservationService
         $slots = [];
         $seenHours = [];
 
-        foreach ($schedules as $schedule) {
-            $current = Carbon::parse($schedule->start_time);
-            $end = Carbon::parse($schedule->end_time);
+        $shiftsToProcess = $oldSchedules->isNotEmpty()
+            ? $oldSchedules->map(fn($s) => ['start' => $s->start_time, 'end' => $s->end_time])
+            : $newShifts;
+
+        foreach ($shiftsToProcess as $shift) {
+            $current = Carbon::parse($shift['start']);
+            $end     = Carbon::parse($shift['end']);
 
             while ($current < $end) {
                 $hourStr = $current->format('H:i');
+
+                // Omitir slots pasados
+                $slotDT = Carbon::parse($date . ' ' . $hourStr, 'America/Argentina/Buenos_Aires');
+                if ($slotDT->lte($now)) {
+                    $current->addHour();
+                    continue;
+                }
 
                 if (!isset($seenHours[$hourStr])) {
                     $seenHours[$hourStr] = true;

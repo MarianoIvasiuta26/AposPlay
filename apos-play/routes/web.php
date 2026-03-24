@@ -9,6 +9,9 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+// MercadoPago webhook (no auth, no CSRF)
+Route::post('/mercadopago/webhook', [App\Http\Controllers\MercadoPagoController::class, 'webhook'])->name('mercadopago.webhook');
+
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
@@ -30,6 +33,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Mercado Pago Routes (user needs these for payment flow)
     Route::get('/payment/create/{reservation}', [App\Http\Controllers\MercadoPagoController::class, 'createPreference'])->name('mercadopago.create');
+    Route::get('/payment/preference-url/{reservation}', [App\Http\Controllers\MercadoPagoController::class, 'preferenceUrl'])->name('mercadopago.preference-url');
     Route::get('/payment/success', [App\Http\Controllers\MercadoPagoController::class, 'success'])->name('mercadopago.success');
     Route::get('/payment/failure', [App\Http\Controllers\MercadoPagoController::class, 'failure'])->name('mercadopago.failure');
     Route::get('/payment/pending', [App\Http\Controllers\MercadoPagoController::class, 'pending'])->name('mercadopago.pending');
@@ -39,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:superadmin,owner'])->prefix('admin')->group(function () {
     Route::get('/reservas-del-dia', App\Livewire\Admin\DailyReservations::class)->name('admin.daily-reservations');
     Route::get('/cupones', App\Livewire\Admin\Coupons::class)->name('admin.coupons');
+    Route::get('/auditoria', App\Livewire\Admin\AuditLog\Index::class)->name('admin.audit-log');
     Route::get('/reporte-ocupacion', App\Livewire\Admin\OccupancyReport::class)->name('admin.occupancy-report');
     Route::get('/exportar-ingresos', App\Livewire\Admin\IncomeExport::class)->name('admin.income-export');
 
@@ -73,6 +78,44 @@ Route::middleware(['auth', 'role:superadmin,owner'])->prefix('owner')->group(fun
 // Staff routes (superadmin + owner + staff) — reservas scoped por complejo
 Route::middleware(['auth', 'role:superadmin,owner,staff'])->prefix('staff')->group(function () {
     Route::get('/reservas', App\Livewire\Staff\Reservations::class)->name('staff.reservations');
+});
+
+// Tournament routes (all authenticated users)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/torneos', App\Livewire\Tournaments\Index::class)->name('tournaments.index');
+
+    // Tournament payment callbacks (must be before {tournament} route to avoid conflict)
+    Route::get('/torneos/payment/success', function () {
+        $teamId = request()->query('external_reference');
+        if ($teamId && str_starts_with($teamId, 'tournament_team_')) {
+            $id = (int) str_replace('tournament_team_', '', $teamId);
+            $team = \App\Models\TournamentTeam::find($id);
+            if ($team && request()->query('status') === 'approved') {
+                app(\App\Services\TournamentService::class)->markTeamPaid($team, request()->query('payment_id', 'unknown'));
+            }
+        }
+        return redirect()->route('tournaments.index')->with('success', 'Pago de inscripción realizado con éxito.');
+    })->name('tournaments.payment.success');
+
+    Route::get('/torneos/payment/failure', function () {
+        return redirect()->route('tournaments.index')->with('error', 'El pago fue rechazado.');
+    })->name('tournaments.payment.failure');
+
+    Route::get('/torneos/payment/pending', function () {
+        return redirect()->route('tournaments.index')->with('warning', 'El pago está pendiente.');
+    })->name('tournaments.payment.pending');
+
+    Route::get('/torneos/{tournament}', App\Livewire\Tournaments\Show::class)->name('tournaments.show');
+    Route::get('/torneos/{tournament}/inscribirse', App\Livewire\Tournaments\Register::class)->name('tournaments.register');
+});
+
+// Owner tournament management
+Route::middleware(['auth', 'role:superadmin,owner'])->prefix('owner/torneos')->name('owner.tournaments.')->group(function () {
+    Route::get('/', App\Livewire\Owner\Tournaments\Index::class)->name('index');
+    Route::get('/crear', App\Livewire\Owner\Tournaments\Form::class)->name('create');
+    Route::get('/{tournament}/editar', App\Livewire\Owner\Tournaments\Form::class)->name('edit');
+    Route::get('/{tournament}/equipos', App\Livewire\Owner\Tournaments\Teams::class)->name('teams');
+    Route::get('/{tournament}/fixture', App\Livewire\Owner\Tournaments\Fixture::class)->name('fixture');
 });
 
 // UC-06: Gestionar canchas (admin/owner only)
