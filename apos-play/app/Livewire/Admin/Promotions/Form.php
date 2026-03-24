@@ -49,9 +49,10 @@ class Form extends Component
         ];
     }
 
-    public function mount(?Promotion $promotion = null)
+    public function mount($promotion = null)
     {
-        if ($promotion && $promotion->exists) {
+        if ($promotion) {
+            $promotion = Promotion::findOrFail($promotion);
             $this->promotion = $promotion;
             $this->name = $promotion->name;
             $this->type = $promotion->type->value;
